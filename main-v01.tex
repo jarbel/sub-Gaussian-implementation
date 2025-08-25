@@ -10,6 +10,7 @@
 \usepackage{xcolor}
 \usepackage{thmtools}
 \usepackage{tikz}
+\usepackage{comment}
 \usetikzlibrary{shapes, arrows, positioning}
 
 
@@ -77,14 +78,30 @@
 \def\beaq{\begin{eqnarray}}
 \def\eeaq{\end{eqnarray}}
 
+\newcommand\blfootnote[1]{%
+  \begingroup
+  \renewcommand\thefootnote{}\footnote{#1}%
+  \addtocounter{footnote}{-1}%
+  \endgroup
+}
 
-\title{Characterisation of optimal sub-Gaussian variance proxy\\ and application to discrete distributions}
+\author{$_{1}$Julyan Arbel \footnote{Universit\'{e} Grenoble Alpes, Inria, CNRS, Grenoble INP, LJK, 38000 Grenoble, France}\,\,,
+$_{2}$Soufiane Atouani\footnote{??}\,\,,
+$_{3}$Olivier Marchal\footnote{Universit\'{e} Jean Monnet Saint-\'{E}tienne, CNRS, Institut Camille Jordan UMR 5208, Institut Universitaire de France, Les Forges 2, 20 Rue du Dr Annino, 42000 Saint-Etienne, France.}
+}
+
+
+\title{Characterisation of optimal sub-Gaussian variance proxy\\ and applications to discrete distributions}
 \date{}
 
 \begin{document}
 
 \maketitle
 
+\blfootnote{\textit{Email Addresses:}
+$_{1}$\textsf{soufiiane.atouanii@gmail.com}
+$_{2}$\textsf{julyan.arbel@inria.fr},  
+$_{3}$\textsf{olivier.marchal@univ-st-etienne.fr}}
 %\small
 %\textbf {Firstname Lastname, Firstname2 Lastname2, Firstname3 Lastname3}\\[6pt]
 %Institution(s) of author(s), address(es) \\ author@somewhere.host\\[6pt]
@@ -93,9 +110,7 @@
 %Publised online: data
 
 \begin{abstract}
-We investigate the problem of characterizing the optimal variance proxy  for random variables whose moment generating function has bounded growth at infinity. Our method is based on a detailed analysis of function variations, leading  to an explicit and practical procedure for computing the optimal variance proxy.  This involves solving a well-defined equation and identifying key critical points. A central result of this work shows that the optimal variance proxy is given by the maximum between the standard variance and a supremum term arising from the function analysis. We apply this approach to discrete random variables, with a particular focus on the case of 3-mass distributions, thus generalizing the well-studied 2-mass or Bernoulli case. In this setting, we derive closed-form solutions for the optimal variance proxy  in several cases, providing explicit characterizations of strict sub-Gaussianity. In particular, we prove that the discrete uniform distribution over 
-$N$ points is strictly sub-Gaussian. These findings demonstrate the effectiveness of our method for both theoretical investigations and practical computations involving discrete distributions.
-%As an additional contribution, we provide a Python library that collects the main results related to sub-Gaussianity, including our new findings on optimal variance proxies. This resource aims to facilitate further research and practical applications in the study of sub-Gaussian random variables.
+We investigate the problem of characterizing the optimal variance proxy for sub-Gaussian random variables whose moment generating function has bounded growth at infinity. Our method is based on a detailed analysis of function variations, leading  to an explicit and practical procedure for computing the optimal variance proxy. A central result of this work shows that the optimal variance proxy is always given by the maximum between the standard variance and the supremum of an explicit function evaluated at some critical points that are characterized explicitly as some specific zeros of another explicit function. We also propose a complete characterization when the set of critical points reduces to at most two points and apply these results to discrete random variables, with a particular focus on the case of 3-mass distributions, thus generalizing the well-studied 2-mass or Bernoulli case. In this setting, we derive closed-form solutions for the optimal variance proxy in several cases, providing explicit characterizations of strict sub-Gaussianity. In particular, we prove that the discrete uniform distribution over $N$ points is strictly sub-Gaussian. These findings demonstrate the effectiveness of our method for both theoretical investigations and practical computations involving discrete distributions.
 \end{abstract}
 
 \tableofcontents
@@ -103,7 +118,7 @@ $N$ points is strictly sub-Gaussian. These findings demonstrate the effectivenes
 \newpage
 
 \section{Introduction}\label{s:1}
-The sub-Gaussian property, first characterized by \citet{Kahane1960PropritsLD} and \citet{buldygin1980sub}, has become a critical tool for understanding the tail behavior of random variables. Since these pioneering works, this property has emerged as a fundamental concept in probability theory due to its profound implications in various mathematical disciplines, such as concentration inequalities \citep{Hoeffding1963, boucheron2003concentration, raginsky2013concentration} and Bayesian statistics \citep{elder2016bayesian, catoni2007pac}. In machine learning, sub-Gaussian tails play a crucial role in bandit algorithms \citep{bubeck2012regret}, in the study of the singular values of random matrices \citep{rudelson2010non}, or in Bayesian neural networks \citep{vladimirova2019understanding, vladimirova2020sub}, to name a few.
+The sub-Gaussian property, first characterized by \citet{Kahane1960PropritsLD} and \citet{buldygin1980sub}, has become a critical tool for understanding the tail behavior of random variables. Since these pioneering works, this property has emerged as a fundamental concept in probability theory due to its profound implications in various mathematical disciplines, such as concentration inequalities \citep{Hoeffding1963, boucheron2003concentration, raginsky2013concentration} and Bayesian statistics \citep{elder2016bayesian, catoni2007pac}. In machine learning, sub-Gaussian tails play a crucial role in bandit algorithms \citep{bubeck2012regret}, in the study of the singular values of random matrices \citep{rudelson2010non}, or in BNNs (Bayesian neural networks) \citep{vladimirova2019understanding, vladimirova2020sub}.
 
 \begin{definition}[Sub-Gaussian variables] A random variable \( X \) with finite mean \( \mu = \mathbb{E}[X] \) is \textit{sub-Gaussian} if there exists a constant \( \sigma^2 > 0 \) such that:
 \begin{equation}
@@ -123,135 +138,188 @@ Although extensive research on optimal variance proxy has focused on continuous 
 
 
 \paragraph{Contributions and outline.}
-In this work, we first provide in Section~\ref{sec:charac} a characterization of the optimal sub-Gaussian variance proxy for random variables with bounded moment generating functions, following a general methodology based on function variation analysis. This characterization yields a practical computational procedure via critical point identification and equation solving, enabling explicit computation of the optimal proxy. We then apply this approach with a focus to discrete distributions. We start in Section~\ref{sec:3-mass} with 3-point distributions, both symmetric and asymmetric, extending the classical Bernoulli (2-point) case. In the symmetric setting, we uncover a phase transition: for probabilities $p \geq 1/6$, strict sub-Gaussianity holds, whereas for $p < 1/6$, it does not, and we derive an explicit characterization of the optimal proxy through a pair of solvable equations. In the asymmetric case, we delineate two regimes depending on the relationship between the central mass and the edge probabilities, and in one of these, we provide a closed-form expression for the optimal proxy. Finally, we establish in Section~\ref{sec:uniform} that discrete uniform distributions over $N$ points are strictly sub-Gaussian for all $N$, using a moment-based analysis of the exponential family induced by the log-partition function. These results provide both theoretical insight and numerically tractable tools for assessing sub-Gaussianity in discrete settings.
-
+In this work, we first provide in Section~\ref{sec:charac} a characterization of the optimal sub-Gaussian variance proxy for random variables with bounded moment generating functions, following a general methodology based on function variation analysis. This characterization yields a practical computational procedure via critical points identification and equation solving, enabling explicit computation of the optimal variance proxy. These results are made even more precise when the number of critical points is less than two. We then apply this approach with a focus to discrete distributions. We start in Section~\ref{sec:3-mass} with 3-point distributions, both symmetric and asymmetric, extending the classical Bernoulli (2-point) case. In the symmetric setting, we uncover a phase transition: for probabilities $p \geq \frac{1}{6}$, strict sub-Gaussianity holds, whereas for $p < \frac{1}{6}$, it does not, and we derive an explicit characterization of the optimal proxy through a pair of solvable equations. In the asymmetric case, we delineate two regimes depending on the relationship between the central mass and the edge probabilities, and in one of these, we provide a closed-form expression for the optimal proxy. Finally, we establish in Section~\ref{sec:uniform} that discrete uniform distributions over $N$ points are strictly sub-Gaussian for all $N\geq 2$, using a moment-based analysis of the exponential family induced by the log-partition function. These results provide both theoretical insights and numerically tractable tools for assessing sub-Gaussianity in discrete settings.
 
 
 \section{Characterization of optimal sub-Gaussian variance proxy}\label{sec:charac}
 
-Let $Y$ some real random variable and \( \mu = \mathbb{E}[Y] \). Denote by $M_Y(\lambda):=\ln \left(\mathbb{E}[\exp(\lambda (Y - \mu))]\right)$ the cumulant generating function of the centered random variable $Y-\mu$. 
+\sloppy{Let $Y$ be some real random variable with finite moments and \( \mu = \mathbb{E}[Y] \). Denote by $M_Y(\lambda):=\ln \left(\mathbb{E}[\exp(\lambda (Y - \mu))]\right)$ the cumulant generating function of the centered random variable $Y-\mu$. In this paper \textbf{we shall always assume that the random variable $Y$ is such that $M_Y$ is a smooth function}.} 
 Define
 \beq g_Y(\lambda;\sigma^2):=\frac{1}{2}\lambda^2\sigma^2- M_Y(\lambda)= \frac{1}{2}\lambda^2\sigma^2-\ln \left(\mathbb{E}[\exp(\lambda (Y - \mu))]\right)\eeq
 which is a smooth function of $(\lambda,\sigma^2)$.
 We have
-\beq g'_Y(\lambda;\sigma^2):= \lambda\sigma^2- M_Y'(\lambda)\eeq
+\beq g'_Y(\lambda;\sigma^2):= \lambda\sigma^2- M_Y'(\lambda) \, \text{ and } \, g_Y''(\lambda,\sigma^2)=\sigma^2-M_Y''(\lambda)\eeq
 Observe that $g_Y(0,\sigma^2)=0=g_Y'(0,\sigma^2)$. Moreover, for $\lambda\neq 0$, the equation $g_Y'(\lambda,\sigma^2)=0$ is equivalent to $\sigma^2=\frac{M_Y'(\lambda)}{\lambda} $. Thus, the system of equations $g_Y(\lambda;\sigma^2)=0$ and $g_Y'(\lambda,\sigma^2)=0$ with $\lambda\neq 0$ is equivalent to  
-\beq \sigma^2=\frac{1}{\lambda} M_Y'(\lambda) \text{ and } \lambda\neq 0 \text{ sol. of  } \lambda M_Y'(\lambda)- 2M_Y(\lambda)=0\eeq
+\beq \sigma^2=\frac{1}{\lambda} M_Y'(\lambda) \text{ and } \lambda\neq 0 \text{ sol. of  } \lambda M_Y'(\lambda)- 2M_Y(\lambda)=0.\eeq
 
-Let us define
-\beq \mathcal{L}_c^*:=\left\{\lambda_c \in \mathbb{R}^* \,/\,  \lambda_c M_Y'(\lambda_c)- 2M_Y(\lambda_c)=0 \,\, \text{ and }\lambda_c \text{ local min. of } g\left(.,\sigma^2=\frac{ M_Y'(\lambda_c)}{\lambda_c}\right) \right\}\eeq
-and define 
-\beq \mathcal{S}_c^*=\left\{\frac{M_Y'(\lambda_c)}{\lambda_c}  \,/\, \lambda_c\in \mathcal{L}_c\right\}\eeq
-We complement them by defining:
-\beq \mathcal{L}_c=\mathcal{L}_c^*\cup\{0\}\,\,, \,\mathcal{S}_c=\mathcal{S}_c^*\cup\{\operatorname{Var}[Y]\}\eeq 
+Let us define the set $\mathcal{L}_c^*$ that will play an important role in this paper by
+\beq \mathcal{L}_c^*:=\left\{\lambda_c \in \mathbb{R}^* \;\middle|\;  \lambda_c M_Y'(\lambda_c)- 2M_Y(\lambda_c)=0 \,\, \text{ and }\lambda_c \text{ local min. of } g_Y\left(.;\sigma^2=\frac{ M_Y'(\lambda_c)}{\lambda_c}\right) \right\}.\eeq
+Then, define the set
+\beq \mathcal{S}_c^*=\left\{\frac{M_Y'(\lambda_c)}{\lambda_c}  \;\middle|\; \lambda_c\in \mathcal{L}_c^*\right\}.\eeq
+For practical reasons, we complement the two previous sets by defining:
+\beq \mathcal{L}_c=\mathcal{L}_c^*\cup\{0\}\,\,, \,\mathcal{S}_c=\mathcal{S}_c^*\cup\{\operatorname{Var}[Y]\}.\eeq 
 
 Let us first make the following observation.
-\begin{proposition}[Asymptotics at infinity]\label{AsymptInf}If $M_Y(\lambda)\overset{\lambda\to\pm \infty}{=}o(\lambda^2)$ then
+\begin{proposition}[Asymptotics at infinity ans sufficient condition for sub-Gaussianity]\label{AsymptInf}If the cumulant generating function $M_Y$ is a smooth function and satisfy $M_Y(\lambda)\overset{\lambda\to\pm \infty}{=}o(\lambda^2)$ then
 \beq \lim_{\lambda\to \pm\infty}g_Y(\lambda;\sigma^2)=+\infty\,,\, \lim_{\lambda\to \pm\infty}g'_Y(\lambda;\sigma^2)=\pm\infty\,,\, \lim_{\lambda\to \pm\infty}g''_Y(\lambda;\sigma^2)=\sigma^2\eeq
 and $Y$ is sub-Gaussian. Moreover a sufficient condition is that $Y$ is a bounded random variable.    
 \end{proposition}
 
 \begin{proof}The proof is obvious from the definition of $g_Y(\lambda;\sigma^2)=\frac{1}{2}\lambda^2\sigma^2-M_Y(\lambda)$. The sufficient condition is also immediate since if $M$ is a bound for $Y$ then
-$|M_Y(\lambda)|\leq \lambda|M+\mu|=o(\lambda^2)$. The fact that $Y$ is sub-Gaussian follows from the fact that there exists $C>0$ such that $|M(\lambda)|\leq C\lambda^2$ for all $\lambda\in \mathbb{R}$. Thus, taking $\sigma^2>C$ immediately gives that $\sigma^2$ is a variance proxy so that $Y$ is sub-Gaussian.
+$|M_Y(\lambda)|\leq \lambda|M+\mu|=o(\lambda^2)$. The fact that $Y$ is sub-Gaussian follows from the fact that there exists $C>0$ such that $|M_Y(\lambda)|\leq C\lambda^2$ for all $\lambda\in \mathbb{R}$. Thus, taking $\frac{C}{2}$ immediately gives that $\sigma^2$ is a variance proxy so that $Y$ is sub-Gaussian.
 \end{proof}
 
-First, let us prove the following lemma.
 
+Our first main theoretical result is that one can use the sets $\mathcal{S}_c^*$ to characterize the optimal variance proxy.
 
-%\begin{lemma}\label{LemmaTechnicalGeneral}Assume that $M_Y(\lambda)\overset{\lambda\to \pm\infty}{=}o(\lambda^2)$. If $\sigma_{\mathrm{opt}}^2 > \operatorname{Var}[Y]$ then $\sigma_{\mathrm{opt}}^2$ may only be achieved when $g_Y(.;\sigma_{\mathrm{opt}}^2)$ has at least one point $\lambda_0\in \mathbb{R}^*$ where $g(\lambda_0;\sigma_{\mathrm{opt}}^2)=0=g_Y'(\lambda_0;\sigma_{\mathrm{opt}}^2)$. In other words, $\lambda_0\in \mathcal{L}_c^*$ and $\sigma_{\mathrm{opt}}^2=\frac{M_Y'(\lambda_0)}{\lambda_0}\in \mathcal{S}_c^*$.
-%\end{lemma}
-
-%\begin{proof}First, \autoref{AsymptInf} provides control at infinity of the function $g_Y(.;\sigma^2)$ which is positive and locally convex at $\pm \infty$. Then, let us define $\sigma_0^2=\sigma_{\mathrm{opt}}^2 -\frac{1}{2}(\sigma_{\mathrm{opt}}^2-\operatorname{Var}[Y])$. Then observe that for any $\sigma^2\in \left(\sigma_0^2,\sigma_{\mathrm{opt}}^2\right)$, $g(.;\sigma^2)$ is convex non-negative around $\lambda=0$ with $g''(0,\sigma^2)>\sigma_0^2-\operatorname{Var}[Y]>0$. In particular, there exists an interval $(-a,a)$ with $a>0$ where $(\lambda,\sigma^2)\mapsto g(\lambda;\sigma^2)$ is locally positive for any $\lambda\in (-a,a)\setminus\{0\}$ and any $\sigma^2\in \left(\sigma_0^2,\sigma_{\mathrm{opt}}^2\right)$ and such that there exists $A>0$ such that $\sup_{\sigma \in (\sigma_0^2, \sigma_{opt}^2)} \left\{g(-a;\sigma^2),g(a;\sigma^2)\right\} > A$. Thus, for any $\sigma^2\in \left(\sigma_0^2,\sigma_{\mathrm{opt}}^2\right)$, $g(.;\sigma^2)$ has no local minimum except $0$ in $(-a,a)$. Let us consider a local minimum $\lambda_m\neq 0$ (i.e. $|\lambda_m|\geq a$ from the previous discussion) of $g(.;\sigma_{\mathrm{opt}}^2)$ and define $M_m=g(\lambda_m;\sigma_{\mathrm{opt}}^2)$. It is obvious that $M_m$ cannot be strictly negative, otherwise by continuity of $\sigma\to g(\lambda_m;\sigma^2)$, there would exist $\epsilon>0$ such that for any $\sigma^2\in \left(\sigma_{\mathrm{opt}}^2, \sigma_{\mathrm{opt}}^2+\epsilon\right)$: $g(\lambda_m,\sigma^2)<0$ so that $\sigma^2$ would not be a variance proxy in contradiction with the fact that $\sigma_{\mathrm{opt}}^2$ is the optimal variance proxy. Thus we must have $M_m\geq 0$. Assume now by contradiction that there exists $\eta>0$ such that we have all $M_m>\eta$ for all local minima. We shall take $\eta$ sufficiently small so that $\eta<\frac{A}{3}$. In particular, we get that the global minimum of $g(.;\sigma_{\mathrm{opt}}^2)$ on $(-\infty,-a)\cup(a,+\infty)$ is greater than $\eta$. Since $\underset{\lambda\to \pm \infty}{\lim} g(\lambda;\sigma^2)=+\infty$, we may use continuity on a compact set to prove that there exists $\epsilon>0$, with $\epsilon<\frac{1}{2}(\sigma_{\mathrm{opt}}^2-\operatorname{Var}[Y])$ such that the global minimum of $g(.;\sigma^2)$ is greater than $\frac{\eta}{2}$ for any $\sigma^2\in \left(\sigma_{\mathrm{opt}}^2-\epsilon,\sigma_{\mathrm{opt}}^2\right)$. In other words, we may lower $\sigma^2$ from $\sigma_{\mathrm{opt}}^2$ while $g(.;\sigma^2)$ remains non-negative and hence is a variance proxy. This contradicts the fact that $\sigma_{\mathrm{opt}}^2$ is optimal and ends the proof of \autoref{LemmaTechnicalGeneral}.  
-%\end{proof} 
-
-
-The optimal variance proxy is characterized by the following theorem.
-
-\begin{theorem}[Characterization of the optimal variance proxy]\label{GeneralCharac} Let us assume that $M_Y(\lambda)\overset{\lambda\to \pm\infty}{=}o(\lambda^2)$. Then, the optimal variance proxy is characterized by
-\beq \sigma_{\mathrm{opt}}^2 = \max\left\{ \operatorname{Var}(Y),\; \sup_{s \in \mathcal{S}_c^*} s \right\} \eeq    
+\begin{theorem}[Characterization of the optimal variance proxy]\label{GeneralCharac} Assume that $M_Y$ is a smooth function and that $M_Y(\lambda)\overset{\lambda\to \pm\infty}{=}o(\lambda^2)$. Then, the optimal variance proxy is characterized by
+\beq \sigma_{\mathrm{opt}}^2 = \max\left\{ \operatorname{Var}(Y),\; \sup_{s \in \mathcal{S}_c^*} s \right\} \eeq   
 \end{theorem}
 
-\begin{proof}Let us first consider $\sigma^2>\max\left\{ \operatorname{Var}(Y),\; \sup_{s \in \mathcal{S}_c^*} s \right\}$. Then since $\sigma^2>\operatorname{Var}[Y]$, we get that $g(.;\sigma^2)$ is locally convex and non-negative around $\lambda=0$.  Let us consider $\lambda_m(\sigma)\neq 0$ a local minimum of $g(.,\sigma^2)$. For simplicity we shall assume that $\lambda_m(\sigma)>0$ but a similar argument is valid if $\lambda_m(\sigma)<0$. Then we have $\partial_{\sigma}[g(\lambda_m(\sigma);\sigma^2)]= g'(\lambda_m(\sigma);\sigma^2) \partial_\sigma \lambda_m(\sigma) + \lambda_m(\sigma)^2\sigma= \lambda_m(\sigma)^2\sigma>0$. Assume by contradiction that $g(\lambda_m(\sigma);\sigma^2)<0$ then increasing $\sigma$ would increase the value of $g(\lambda_m(\sigma);\sigma^2)$. Since $\partial_{\sigma}[g(\lambda_m(\sigma);\sigma^2)]=\lambda_m(\sigma)^2\sigma>0$ there are only two cases: \begin{itemize}\item $\lambda_m(\sigma)$ remains outside a positive neighborhood of $0$ denoted $(0,\epsilon)$ when we increase $\sigma$ and thus since $\partial_{\sigma}[g(\lambda_m(\sigma);\sigma^2)]>\epsilon^2 \sigma$ there exists a value $\sigma_1>\sigma$ for which $g(\lambda_m(\sigma_1);\sigma_1^2)=0$ which is a contradiction because $\sigma_1^2\in \mathcal{S}_c^*$ so that we should have $\sigma\geq \sigma_1$.
-\item $\lambda_m(\sigma)\to 0_+$ when we increase $\sigma$. In this case this is a contradiction because $g(.,\sigma^2)$ is locally positive and convex in a positive neighborhood of $0$. Indeed, $g(.,\sigma^2)$ must reach a positive local maximum on $(0,\lambda_m(\sigma))$ that we denote $\lambda_{\text{max}}(\sigma)$. By Rolle's theorem on $(0,\lambda_{\text{max}}(\sigma))$ and $(\lambda_{\text{max}}(\sigma),\lambda_m(\sigma))$, there exist at least two distinct values $(\lambda_1(\sigma),\lambda_2(\sigma))$ with $0<\lambda_1(\sigma)<\lambda_{\text{max}}(\sigma)<\lambda_2(\sigma)<\lambda_m(\sigma)$ such that $g''(\lambda_1(\sigma);\sigma^2)=g''(\lambda_2(\sigma);\sigma^2)=0$. Since $\lambda_m(\sigma)\to 0_+$, we must also have $\lambda_1(\sigma),\lambda_2(\sigma)\to 0_+$ and hence by continuity $g''(0,\sigma^2)\to 0$. But this is impossible since $g''(0;\sigma^2)=(\sigma^2-\operatorname{Var}[Y])>0$ is a positive, increasing function of $\sigma$. 
+\begin{proof}Let us first mention that \autoref{AsymptInf} implies that the optimal variance proxy is well-defined. Then let us consider $\sigma^2>\max\left\{ \operatorname{Var}(Y),\; \underset{s \in \mathcal{S}_c^*}{\sup} s \right\}$. Since $\sigma^2>\operatorname{Var}[Y]$, we get that $g_Y(.;\sigma^2)$ is locally convex and non-negative around $\lambda=0$.  Let us consider $\lambda_m(\sigma)\neq 0$ a local minimum of $g_Y(.,\sigma^2)$. For simplicity we shall assume that $\lambda_m(\sigma)>0$ but a similar argument is valid if $\lambda_m(\sigma)<0$. Then we have $\partial_{\sigma}[g_Y(\lambda_m(\sigma);\sigma^2)]= g_Y'(\lambda_m(\sigma);\sigma^2) \partial_\sigma \lambda_m(\sigma) + \lambda_m(\sigma)^2\sigma= \lambda_m(\sigma)^2\sigma>0$. Assume by contradiction that $g_Y(\lambda_m(\sigma);\sigma^2)<0$ then increasing $\sigma$ would increase the value of $g_Y(\lambda_m(\sigma);\sigma^2)$. Since $\partial_{\sigma}[g_Y(\lambda_m(\sigma);\sigma^2)]=\lambda_m(\sigma)^2\sigma>0$ there are only two cases: 
+\begin{itemize}\item $\lambda_m(\sigma)$ remains outside a positive neighborhood of $0$ denoted $(0,\epsilon)$ when we increase $\sigma$ and thus since $\partial_{\sigma}[g_Y(\lambda_m(\sigma);\sigma^2)]>\epsilon^2 \sigma$ and by assumption $g_Y(\lambda_m(\sigma);\sigma^2)<0$, there exists a value $\sigma_1>\sigma$ for which $g_Y(\lambda_m(\sigma_1);\sigma_1^2)=0$ which is a contradiction because $\sigma_1^2\in \mathcal{S}_c^*$ so that we should have $\sigma\geq \sigma_1$.
+\item $\lambda_m(\sigma)\to 0_+$ when we increase $\sigma$. In this case this is a contradiction because $g_Y(.,\sigma^2)$ is locally positive and convex in a positive neighborhood of $0$. Indeed, $g_Y(.,\sigma^2)$ must reach a positive local maximum on $(0,\lambda_m(\sigma))$ that we denote $\lambda_{\text{max}}(\sigma)$. By Rolle's theorem on $(0,\lambda_{\text{max}}(\sigma))$ and $(\lambda_{\text{max}}(\sigma),\lambda_m(\sigma))$, there exist at least two distinct values $(\lambda_1(\sigma),\lambda_2(\sigma))$ with $0<\lambda_1(\sigma)<\lambda_{\text{max}}(\sigma)<\lambda_2(\sigma)<\lambda_m(\sigma)$ such that $g_Y''(\lambda_1(\sigma);\sigma^2)=g_Y''(\lambda_2(\sigma);\sigma^2)=0$. Since $\lambda_m(\sigma)\to 0_+$, we must also have $\lambda_1(\sigma),\lambda_2(\sigma)\to 0_+$ and hence by continuity $g_Y''(0,\sigma^2)\to 0$. But this is impossible since $g_Y''(0;\sigma^2)=(\sigma^2-\operatorname{Var}[Y])>0$ is a positive, increasing function of $\sigma$. 
 \end{itemize}
-Thus we conclude that for any $\sigma^2>\max\{\operatorname{Var}[Y],\sup_{s\in \mathcal{S}_c^*}(s)\}$, all local minima of $g(.;\sigma^2)$ are non-negative so that since $\underset{\lambda\to \pm \infty}{\lim} g(\lambda;\sigma^2)=+\infty$, $g(.;\sigma^2)$ is non-negative on $\mathbb{R}$. Hence $\sigma^2$ is a variance proxy and thus $\sigma_{\mathrm{opt}}^2\leq \max\{\operatorname{Var}[Y],\sup_{s\in \mathcal{S}_c^*}(s)\}$.
+Thus we conclude that for any $\sigma^2>\max\{\operatorname{Var}[Y],\underset{s\in \mathcal{S}_c^*}{\sup} s\}$, all local minima of $g_Y(.;\sigma^2)$ are non-negative so that since $\underset{\lambda\to \pm \infty}{\lim} g_Y(\lambda;\sigma^2)=+\infty$, $g_Y(.;\sigma^2)$ is non-negative on $\mathbb{R}$. Hence $\sigma^2$ is a variance proxy and thus $\sigma_{\mathrm{opt}}^2\leq \max\left\{\operatorname{Var}[Y],\underset{s\in \mathcal{S}_c^*}{\sup} s\right\}$.
 
 \medskip
 
-\sloppy{Let us prove the converse inequality and assume that $\sigma_{\mathrm{opt}}^2< \max\{\operatorname{Var}[Y],\sup_{s\in \mathcal{S}_c^*}(s)\}$. It is well-known that $\operatorname{Var}[Y]$ is always a lower bound for the optimal variance proxy, thus the last inequality is only possible if  $\operatorname{Var}[Y]<\sigma_{\mathrm{opt}}^2< \sup_{s\in \mathcal{S}_c^*}(s)$.} Thus, there exists $s_c\in \mathcal{S}_c^*$ such that $\sigma_{\mathrm{opt}}^2<s_c$, i.e. there exists $\lambda_c\in \mathbb{R}^*$ such that $g(\lambda_c;s_c)=g'(\lambda_c;s_c)=0$ and $\lambda_c$ is a local minimum of $g(.;s_c)$. We have from the fact that the dependence of $g$ relatively to $\sigma$ is quadratic that:
-\beq g(\lambda_c,\sigma^2)=g(\lambda_c,s_c) +\frac{1}{2}\lambda_c^2 (\sigma^2-s_c)=\frac{1}{2}\lambda_c^2 (\sigma^2-s_c)\eeq
-so that $g(\lambda_c,\sigma^2)<0$ when $\sigma^2<s_c$. This implies that $g(.;\sigma^2)$ is no longer non-negative when $\sigma^2<s_c$ so that $\sigma^2$ is not a variance proxy. This contradicts the fact that $\sigma_{\mathrm{opt}}^2<s_c$ is an optimal variance proxy.
+\sloppy{Let us prove the converse inequality and assume that $\sigma_{\mathrm{opt}}^2< \max\left\{\operatorname{Var}[Y],\underset{s\in \mathcal{S}_c^*}{\sup} s\right\}$. It is well-known that $\operatorname{Var}[Y]$ is always a lower bound for the optimal variance proxy, thus the last inequality is only possible if  $\operatorname{Var}[Y]<\sigma_{\mathrm{opt}}^2< \underset{s\in \mathcal{S}_c^*}{\sup} s$.} Thus, there exists $s_c\in \mathcal{S}_c^*$ such that $\sigma_{\mathrm{opt}}^2<s_c$, i.e. there exists $\lambda_c\in \mathbb{R}^*$ such that $g_Y(\lambda_c;s_c)=g_Y'(\lambda_c;s_c)=0$ and $\lambda_c$ is a local minimum of $g_Y(.;s_c)$. We have from the fact that the dependence of $g_Y$ relatively to $\sigma$ is quadratic that:
+\beq g_Y(\lambda_c,\sigma^2)=g_Y(\lambda_c,s_c) +\frac{1}{2}\lambda_c^2 (\sigma^2-s_c)=\frac{1}{2}\lambda_c^2 (\sigma^2-s_c)\eeq
+so that $g_Y(\lambda_c,\sigma^2)<0$ when $\sigma^2<s_c$. This implies that $g_Y(.;\sigma^2)$ is no longer non-negative when $\sigma^2<s_c$ so that $\sigma^2$ is not a variance proxy. This contradicts the fact that $\sigma_{\mathrm{opt}}^2<s_c$ is an optimal variance proxy.
 \end{proof}
 
 
-\begin{remark}The main advantage of the characterization of the optimal variance proxy by \autoref{GeneralCharac} is that it gives a numeric way to obtain the optimal variance proxy in practice. Indeed, in order to determine it, one can numerically solve for the equation $\lambda M'(\lambda)-2M(\lambda)=0$. When numeric solutions are found, one should check numerically if $\lambda$ is a local minimum of $g\left(.;\sigma^2=\frac{M'(\lambda)}{\lambda}\right)$ (a sufficient condition being that $g''\left(\lambda;\sigma^2=\frac{M'(\lambda)}{\lambda}\right)>0$). Collecting all solutions, one picks the optimal variance proxy by looking at the maximal values of $\frac{M'(\lambda)}{\lambda}$ that can easily be computed numerically. In practice, such an algorithm is particularly efficient if the number of solutions of $\lambda M'(\lambda)-2M(\lambda)=0$ is low and if one can bound the intervals on which to look for numeric solutions.  
+\begin{remark}The main advantage of the characterization of the optimal variance proxy by \autoref{GeneralCharac} is that it gives a numeric way to obtain the optimal variance proxy in practice. Indeed, in order to determine it, one can numerically solve for the equation $\lambda M_Y'(\lambda)-2M_Y(\lambda)=0$. When numeric solutions are found, one should check numerically if $\lambda$ is a local minimum of $g_Y\left(.;\sigma^2=\frac{M_Y'(\lambda)}{\lambda}\right)$ (a sufficient condition being that $g_Y''\left(\lambda;\sigma^2=\frac{M_Y'(\lambda)}{\lambda}\right)>0$). Collecting all solutions, one picks the optimal variance proxy by looking at the maximal values of $\frac{M_Y'(\lambda)}{\lambda}$ that can easily be computed numerically. In practice, such an algorithm is particularly efficient if the number of solutions of $\lambda M_Y'(\lambda)-2M_Y(\lambda)=0$ is low and if one can bound the intervals on which to look for numeric solutions.  
 \end{remark}
 
 
 \begin{remark}
-In practice, for a given family of distributions, one should study the elements of $\mathcal{L}_c^*$. If $\mathcal{L}_c^*$ is non empty, one should compare its elements with the corresponding values of $s_c$ to select the optimal variance proxy.
+In practice, for a given family of distributions, one should study the elements of $\mathcal{L}_c^*$. If $\mathcal{L}_c^*$ is non empty, one should compare its elements with the corresponding values of $s_c$ to select the optimal variance proxy. This strategy is particularly efficient when $\mathcal{L}_c^*$ contains very few elements or when these elements can be explicitly expressed in closed-forms.
 \end{remark}
 
+The main numerical and theoretical difficulty to study elements of $\mathcal{L}_c^*$ is the fact that they must be local minima of $g_Y(.;\sigma^2)$. This property is tricky to verify because the second derivative may also vanish at this points making the analysis complicated. However, when $g_Y''(.;\sigma^2)$ has very few zeros, it is possible to study its sign and thus remove this complication.  
 
+\begin{proposition}[Positivity when $g_Y''$ has less than one zero on a half-line]\label{Prop01Zeros} Assume that $M_Y$ is a smooth function and that $M_Y(\lambda)\overset{\lambda\to \pm\infty}{=}o(\lambda^2)$. Assume that $g_Y''(.;\sigma^2)$ has no or one zero on $\mathbb{R}_+^*$ for some $\sigma^2\geq \operatorname{Var}[Y]$, then $g_Y(.;\sigma^2)$ is positive on $\mathbb{R}_+^*$. A similar result holds for $\mathbb{R}_-^*$.
+\end{proposition}
 
-%\textcolor{orange}{In our case, there are only one non-zero solution when $p_3<4\sqrt{p_1p_2}$ and it is explicit: $2\lambda_0$. In the second regime, we have two non-zero solutions: $2\lambda_0$ and another one on $\mathbb{R}_+$ and we should compare their corresponding values of $s_c$ to decide which gives the optimal variance proxy.}
-
-Another useful result in practice is given in the following general lemma. 
-
-\begin{lemma}[Local minimum when $g_Y''(.;\sigma^2)$ has two positive zeros and $\sigma^2>\text{Var}(Y)$]
-\label{LemmaNumber}
-Let us define $\sigma_0^2=\sigma_{\mathrm{opt}}^2 -\frac{1}{2}(\sigma_{\mathrm{opt}}^2-\operatorname{Var}[Y])$ and assume that $M_Y(\lambda)\overset{\lambda\to \pm\infty}{=}o(\lambda^2)$ and that for any $\sigma^2\in \left(\operatorname{Var}[Y],+\infty\right)$, $g''(.;\sigma^2)$ has exactly two zeros $(\lambda_1(\sigma),\lambda_2(\sigma))$ such that $0<\lambda_1(\sigma)<\lambda_2(\sigma)$. Then, $g(.;\sigma^2)$ has at most one local minimum on $\mathbb{R}_+^*$. More precisely, if there exists $\sigma_1^2\in \left(\operatorname{Var}[Y],\sigma_0^2\right)$, where  such that $g'(.;\sigma_1^2)$ has a zero on $\mathbb{R}_+^*$, then  $g(.;\sigma^2)$ is strictly positive for $\sigma^2\geq\sigma_1^2$ and $g(.;\sigma^2)$ admits a unique local minimum $\lambda_m(\sigma)$ on $\mathbb{R}_+^*$ located in $\lambda_m(\sigma)\in\left(\lambda_1(\sigma),\lambda_2(\sigma)\right)$ for $\operatorname{Var}[Y]<\sigma^2<\sigma_1^2$. Also, $\lambda_m(\sigma)$ is an increasing function of $\sigma$.\\ 
-Then the equations $g(\lambda,\sigma^2)=0=g'(\lambda,\sigma^2)$ have at most one solution on $\mathbb{R}_+^*\times \left(\operatorname{Var}[Y],+\infty\right)$:
-\begin{itemize}
-    \item if it has no solution, then $g(.;\sigma^2)$ is non-negative on $\mathbb{R}_+$ for any $\sigma^2>\operatorname{Var}[Y]$.
-    \item if it has one solution $(\lambda_c,\sigma_c^2)$, then it is necessarily a local minimum and $g(.;\sigma^2)$ is non-negative on $\mathbb{R}_+$ if and only if $\sigma^2\geq \sigma_c^2$. 
-\end{itemize}
-A similar result is valid on $\mathbb{R}_-^*$. 
-\end{lemma}
-
-\begin{proof}The proof follows from the study of variations. Indeed, let us first notice that for any $\sigma^2>\operatorname{Var}[Y]$, we have that $g(.;\sigma^2)$ is locally convex and positive around $\lambda=0$ since $g''(0;\sigma^2)=\sigma^2-\operatorname{Var}[Y]>0$. We also remind that $\underset{\lambda\to \pm \infty}{\lim} g''(\lambda;\sigma^2)=\sigma^2>0$. so that $g(.;\sigma^2)$ is also convex at infinity. Thus, from the assumption that $g''(.;\sigma^2)$ has exactly two zeros $(\lambda_1(\sigma),\lambda_2(\sigma))$ on $\mathbb{R}_+^*$, we conclude either $g''(.;\sigma^2)$ does not change sign at its zeros and in this case, $g(.;\sigma^2)$ is strictly convex on $\mathbb{R}_+^*$ with $g(0;\sigma^2)=0$ so that it is positive and increasing on $\mathbb{R}_+$, thus there is no solution of $g'(.;\sigma^2)=0$ on $\mathbb{R}_+^*$. Or that $g''(.;\sigma^2)$ is necessarily positive on $(0,\lambda_1(\sigma))$, negative on $(\lambda_1(\sigma),\lambda_2(\sigma))$ and positive on $(\lambda_2(\sigma),+\infty)$. Thus, $g'(.;\sigma^2)$ is increasing on $(0,\lambda_1(\sigma))$ and since $g'(0;\sigma^2)$ it is positive on $(0,\lambda_1(\sigma))$. Then, $g'(.;\sigma^2)$ is decreasing on $(\lambda_1(\sigma),\lambda_2(\sigma))$ and then increasing on $(\lambda_2(\sigma),+\infty)$. In particular $g'(.;\sigma^2)$ admits a unique local minimum at $\lambda=\lambda_2(\sigma)$ on $\mathbb{R}_+^*$. Consequently, if $g'(\lambda_2(\sigma);\sigma^2)\geq 0$, then $g(.;\sigma^2)$ is non-negative on $\mathbb{R}_+$ and thus since $g(0;\sigma^2)=0$, we get that $g(.;\sigma^2)$ is non-negative on $\mathbb{R}_+$. Alternatively, if $g'(\lambda_2(\sigma);\sigma^2)<0$, then $g'(.;\sigma^2)$ has exactly two zeros $\lambda_1(\sigma)<\lambda_l(\sigma)<\lambda_r(\sigma)<\lambda_2(\sigma)$ and it is negative on $(\lambda_l(\sigma),\lambda_r(\sigma))$ and positive on $(0,\lambda_l(\sigma))\cup(\lambda_r(\sigma),+\infty)$. Consequently, $g(.;\sigma^2)$ has exactly one local minimum on $\mathbb{R}_+^*$ which is necessarily located in  $(\lambda_1(\sigma),\lambda_2(\sigma))$.
-Next, let us observe that:
-\beq \partial_\sigma[g'(\lambda_2(\sigma);\sigma^2)]=g''(\lambda_2(\sigma);\sigma^2) \partial_\sigma[\lambda_2(\sigma)]+ 2\sigma\lambda_2(\sigma)=2\sigma\lambda_2(\sigma)>0\eeq
-Thus, the local minimum of $g'(.;\sigma^2)$ is an increasing function of $\sigma$, so that if it is null for a value $\sigma_1$, then it is positive for $\sigma>\sigma_1$ and negative for $\sigma<\sigma_1$.
-Finally, let us observe that
-\beq  \partial_\sigma[g(\lambda_m(\sigma);\sigma^2)]=g'(\lambda_m(\sigma);\sigma^2) \partial_\sigma[\lambda_m(\sigma)]+ \sigma\lambda_m(\sigma)^2=\sigma\lambda_m(\sigma)^2>0\eeq
-so that $\lambda_m(\sigma)$ is a increasing function of $\sigma$. Let us denote $(\lambda_c,\sigma_c^2)\in \mathbb{R}_+^*\times \left(\operatorname{Var}[Y],+\infty\right)$ a solution of $g(\lambda,\sigma^2)=0=g'(\lambda,\sigma^2)$, then for $\sigma<\sigma_c$, we have $g(\lambda_m(\sigma);\sigma^2)<0$ while for $\sigma>\sigma_c$, we have $g(\lambda_m(\sigma);\sigma^2)>0$. Since $g(.;\sigma^2)$ has only a unique local minimum $\lambda_m(\sigma)$ and a local maximum on $\mathbb{R}_+^*$ which is always strictly positive, we conclude that we cannot have another solution of $g(\lambda,\sigma^2)=0=g'(\lambda,\sigma^2)$ with $\lambda\in \mathbb{R}_+^*$. When there is no solution, we have $g(\lambda_m(\sigma);\sigma^2)>0$ so that $g(.;\sigma^2)$ is non-negative on $\mathbb{R}_+^*$. When we have a unique solution $(\lambda_c,\sigma_c^2)$, then $g(\lambda_m(\sigma);\sigma^2)>0$ for $\sigma>\sigma_c$, $g(\lambda_m(\sigma_c);\sigma_c^2)=0$ and $g(\lambda_m(\sigma);\sigma^2)<0$ for $\sigma<\sigma_c$ concluding the proof. 
+\begin{proof} The proof is obvious. Indeed, if $g_Y''(.;\sigma^2)$ has no zero on $\mathbb{R}_+^*$, then it is strictly convex on $\mathbb{R}_+^*$ and since $g_Y(0;\sigma^2)=g_Y'(0;\sigma^2)=0$, $g_Y(.;\sigma^2)$ is positive on $\mathbb{R}_+^*$. Similarly, if $g_Y''(.;\sigma^2)$ has a unique zero on $\mathbb{R}_+^*$, then it cannot change sign at this zero, because $g_Y''(0;\sigma^2)=\sigma^2-\operatorname{Var}[Y]\geq 0$ and $\underset{\lambda\to +\infty}{\lim}g_Y''(\lambda;\sigma^2)=\sigma^2>0$. Hence, we conclude similarly that $g_Y(.;\sigma^2)$ is positive on $\mathbb{R}_+^*$. 
 \end{proof}
 
-\begin{remark} The cases where $g''$ has no or one zero on $\mathbb{R}_+^*$ are trivial for $\sigma^2\geq \operatorname{Var}[Y]$. Indeed, if $g''(.;\sigma^2)$ has no zero on $\mathbb{R}_+^*$, then it is strictly convex on $\mathbb{R}_+^*$ and since $g(0;\sigma^2)=g'(0;\sigma^2)=0$, $g(.;\sigma^2)$ is positive on $\mathbb{R}_+^*$. If $g''(.;\sigma^2)$ has a unique zero on $\mathbb{R}_+^*$, then it cannot change sign at this zero, because $g''(0;\sigma^2)=\sigma^2-\operatorname{Var}[Y]\geq 0$ and $\underset{\lambda\to +\infty}{\lim}g''(\lambda;\sigma^2)=\sigma^2>0$. Hence, we conclude similarly that $g(.;\sigma^2)$ is positive on $\mathbb{R}_+^*$. 
-\end{remark}
+Unfortunately the situation becomes more involved when $g_Y''(.;\sigma^2)$ has more than one zero on a half-line. However, we can still get information when $g_Y''(.;\sigma^2)$ has exactly two zeros on a half-line.
 
-We may complement \autoref{LemmaNumber} with another lemma regarding the situation when $\sigma<\sigma_{\mathrm{opt}}$.
+\begin{comment}
 
-\begin{lemma}[Local minimum when $g_Y''(.;\sigma^2)$ has two positive zeros and $\sigma^2<\operatorname{Var}(Y)$]\label{LemmaNumber2}
-Assume that $M_Y(\lambda)\overset{\lambda\to \pm\infty}{=}o(\lambda^2)$ and that for any $\sigma^2\in \left(0,\operatorname{Var}[Y]\right)$, $g''(.;\sigma^2)$ has exactly two zeros $(\lambda_1(\sigma),\lambda_2(\sigma))$ such that $0<\lambda_1(\sigma)<\lambda_2(\sigma)$. Then, there is no solution to the set of equations $g_Y(\lambda;\sigma^2)=0=g_Y'(\lambda;\sigma^2)$ with $\lambda>0$ and $\sigma^2\in \left(0,\operatorname{Var}[Y]\right)$.\\
-A similar result holds on $\mathbb{R}_-^*$.
+
+\textcolor{red}{Olivier: We should merge the previous two lemmas to state something for two positive zeros on $R_+^*$ for $g''_Y(.,\sigma^2)$. Basically, it says that in this case, the equation $g_Y(\lambda,\sigma^2)=0=g'_Y(\lambda,\sigma^2)$ has at most one solution with $\lambda\in R_+^*$. If it has no zero then $g_Y(.,\sigma^2)$ is always non negative. If it has one solution $(\lambda_c,\sigma_c^2)$ then $\sigma_c^2>Var[Y]$ and $g_Y(.,\sigma^2)$ is non-negative on $R_+$ if and only if $\sigma^2\geq \sigma_c^2$. 
+}
+\end{comment}
+
+Another useful result in practice is given in the following general lemma.
+\begin{lemma}[Local minimum when $g_Y''(.;\sigma^2)$ has two positive zeros]
+\label{LemmaMerged}
+Assume that $M_Y$ is a smooth function with $M_Y(\lambda)\overset{\lambda\to \pm\infty}{=}o(\lambda^2)$, and that for any $\sigma^2\in (0,\operatorname{Var}[Y])\cup(\operatorname{Var}[Y],+\infty)$, $g_Y''(.;\sigma^2)$ has exactly two zeros $(\lambda_1(\sigma),\lambda_2(\sigma))$ such that $0<\lambda_1(\sigma)<\lambda_2(\sigma)$. 
+
+Then the equations $g_Y(\lambda,\sigma^2)=0=g_Y'(\lambda,\sigma^2)$ have at most one solution on $\mathbb{R}_+^*\times((0,\operatorname{Var}[Y])\cup(\operatorname{Var}[Y],+\infty))$. More precisely:
+
+\begin{enumerate}
+\item \textbf{Case $\sigma^2 < \operatorname{Var}[Y]$:} There is no solution to $g_Y(\lambda,\sigma^2)=0=g_Y'(\lambda,\sigma^2)$ with $\lambda>0$.
+
+\item \textbf{Case $\sigma^2 > \operatorname{Var}[Y]$:} Let $\sigma_0^2=\sigma_{\mathrm{opt}}^2 -\frac{1}{2}(\sigma_{\mathrm{opt}}^2-\operatorname{Var}[Y])$. 
+\begin{itemize}
+    \item If there exists $\sigma_1^2\in(\operatorname{Var}[Y],\sigma_0^2)$ such that $g_Y'(.;\sigma_1^2)$ has a zero on $\mathbb{R}_+^*$, then:
+    \begin{itemize}
+        \item $g_Y(.;\sigma^2)$ is strictly positive for $\sigma^2\geq\sigma_1^2$
+        \item $g_Y(.;\sigma^2)$ admits a unique local minimum $\lambda_m(\sigma)$ on $\mathbb{R}_+^*$ located in $(\lambda_1(\sigma),\lambda_2(\sigma))$ for $\operatorname{Var}[Y]<\sigma^2<\sigma_1^2$
+        \item $\lambda_m(\sigma)$ is an increasing function of $\sigma$
+    \end{itemize}
+    
+    \item If the equations $g_Y(\lambda,\sigma^2)=0=g_Y'(\lambda,\sigma^2)$ have:
+    \begin{itemize}
+        \item \textbf{No solution:} then $g_Y(.;\sigma^2)$ is non-negative on $\mathbb{R}_+$ for any $\sigma^2>\operatorname{Var}[Y]$
+        \item \textbf{One solution} $(\lambda_c,\sigma_c^2)$: then necessarily $\lambda_c>0$ is a local minimum, $\sigma_c^2>\operatorname{Var}[Y]$, and $g_Y(.;\sigma^2)$ is non-negative on $\mathbb{R}_+$ if and only if $\sigma^2\geq \sigma_c^2$
+    \end{itemize}
+\end{itemize}
+\end{enumerate}
+
+A similar result is valid on $\mathbb{R}_-^*$.
 \end{lemma}
-
-\begin{proof}For any $\sigma^2<\operatorname{Var}[Y]$, we have that $g_Y(\lambda\sigma^2)=(\sigma^2-\operatorname{Var}[Y])\lambda^2+o(\lambda^2)$ when $\lambda\to 0_+$. Thus, $g(.;\sigma^2)$ is locally concave and negative around $\lambda=0_+$. Since  $M_Y(\lambda)\overset{\lambda\to \pm\infty}{=}o(\lambda^2)$, we know that $g_Y(.;\sigma^2)$ is locally convex and positive when $\lambda\to +\infty$. Since $g_Y''(.;\sigma^2)$ is assumed to have exactly two positive zeros $\lambda_1(\sigma)<\lambda_2(\sigma)$, we may only have the following cases:
+\begin{proof}
+We analyze the two cases separately based on the relationship between $\sigma^2$ and $\operatorname{Var}[Y]$.\\
+\textbf{Case 1}: For any $\sigma^2<\operatorname{Var}[Y]$, we have that $g_Y(\lambda\sigma^2)=(\sigma^2-\operatorname{Var}[Y])\lambda^2+o(\lambda^2)$ when $\lambda\to 0_+$. Thus, $g_Y(.;\sigma^2)$ is locally concave and negative around $\lambda=0_+$. Since  $M_Y(\lambda)\overset{\lambda\to \pm\infty}{=}o(\lambda^2)$, we know that $g_Y(.;\sigma^2)$ is locally convex and positive when $\lambda\to +\infty$. Since $g_Y''(.;\sigma^2)$ is assumed to have exactly two positive zeros $\lambda_1(\sigma)<\lambda_2(\sigma)$, we may only have the following cases:
 \begin{itemize}
     \item $g''_Y(.;\sigma^2)$ is negative on $(0,\lambda_1(\sigma))$ and changes sign at $\lambda_1(\sigma)$. Thus, it is positive on $(\lambda_1(\sigma),\lambda_2(\sigma))$ and cannot change sign at $\lambda_2(\sigma)$ to remain positive at $+\infty$. Hence, $g''_Y(.;\sigma^2)$ is positive on $(\lambda_1(\sigma),\lambda_2(\sigma))\cup (\lambda_2(\sigma),+\infty)$. Consequently, $g'_Y(.;\sigma^2)$ is decreasing on $(0,\lambda_1(\sigma))$ and increasing on $(\lambda_1(\sigma),+\infty)$. Since $g'_Y(0;\sigma^2)$, we have $g'_Y(\lambda_1(\sigma);\sigma^2)<0$ and since $g'_Y(+\infty;\sigma^2)=+\infty$, $g'_Y$ has only one zero $\lambda_0(\sigma)$ on $\mathbb{R}_+^*$ that satisfies $\lambda_0(\sigma)>\lambda_1(\sigma)$. Moreover, $g'_Y(.;\sigma^2)$ is negative on $(0,\lambda_0(\sigma))$ and positive on $(\lambda_0(\sigma),+\infty)$. Hence, $g_Y(.;\sigma^2)$ is decreasing on $(0,\lambda_0(\sigma))$ and increasing on $(\lambda_1(\sigma),+\infty)$. Since $g_Y(0;\sigma^2)=0$ and $g_Y(+\infty;\sigma^2)=+\infty$, $g_Y$ admits a unique zero $\lambda_*(\sigma)$ on $\mathbb{R}_+^*$ and we have $\lambda_*(\sigma)>\lambda_0(\sigma)$. Hence, there are no simultaneous solutions to $g_Y(\lambda;\sigma^2)=0=g_Y'(\lambda;\sigma^2)$ with $\lambda>0$.
     \item $g''_Y(.;\sigma^2)$ is negative on $(0,\lambda_1(\sigma))$ and does not change sign at $\lambda_1(\sigma)$ so it is negative on $(0,\lambda_2(\sigma))$. In order to be positive at $\lambda\to +\infty$, $g_Y''(.;\sigma^2)$ must change sign at $\lambda=\lambda_2(\sigma)$. Thus, $g_Y'(.;\sigma^2)$ is decreasing on $(0,\lambda_2(\sigma))$ and increasing on $(\lambda_2(\sigma),+\infty)$. Since $g_Y'(0;\sigma^2)=0$ and $g_Y'(+\infty;\sigma^2)=+\infty$, $g_Y'(.;\sigma^2)$ admits a unique zero $\lambda_0(\sigma)$ on $\mathbb{R}_+^*$ and it satisfies $\lambda_0(\sigma)>\lambda_2(\sigma)$. Moreover, $g_Y'(.;\sigma^2)$ is negative on $(0,\lambda_0(\sigma))$ and positive on $(\lambda_0(\sigma),+\infty)$. Since $g_Y(0;\sigma^2)=0$ and $g_Y(+\infty;\sigma^2)=+\infty$, $g_Y(.,\sigma^2)$ is decreasing and negative on $(0,\lambda_0(\sigma))$ and increasing on $(\lambda_0(\sigma),+\infty)$. Hence, $g_Y(.;\sigma^2)$ admits a unique zero $\lambda_*(\sigma)$ on $\mathbb{R}_+^*$ and we have $\lambda_*(\sigma)>\lambda_0(\sigma)$. Hence, there are no simultaneous solutions to $g_Y(\lambda;\sigma^2)=0=g_Y'(\lambda;\sigma^2)$ with $\lambda>0$.
 \end{itemize}
+\textbf{Case 2}: For $\sigma^2 > \operatorname{Var}[Y]$, the proof follows from a precise study of variations. Indeed, let us first notice that for any $\sigma^2>\operatorname{Var}[Y]$, we have that $g_Y(.;\sigma^2)$ is locally convex and positive around $\lambda=0$ since $g_Y''(0;\sigma^2)=\sigma^2-\operatorname{Var}[Y]>0$. We also remind that $\underset{\lambda\to \pm \infty}{\lim} g_Y''(\lambda;\sigma^2)=\sigma^2>0$ so that $g_Y(.;\sigma^2)$ is also convex at infinity. Thus, from the assumption that $g_Y''(.;\sigma^2)$ has exactly two zeros $(\lambda_1(\sigma),\lambda_2(\sigma))$ on $\mathbb{R}_+^*$, we conclude that either $g_Y''(.;\sigma^2)$ does not change sign at its zeros and in this case, $g_Y(.;\sigma^2)$ is strictly convex on $\mathbb{R}_+^*$ with $g_Y(0;\sigma^2)=0$ so that it is positive and increasing on $\mathbb{R}_+$, thus there is no solution of $g_Y'(.;\sigma^2)=0$ on $\mathbb{R}_+^*$. Or that $g_Y''(.;\sigma^2)$ is necessarily positive on $(0,\lambda_1(\sigma))$, negative on $(\lambda_1(\sigma),\lambda_2(\sigma))$ and positive on $(\lambda_2(\sigma),+\infty)$. Thus, $g_Y'(.;\sigma^2)$ is increasing on $(0,\lambda_1(\sigma))$ and since $g_Y'(0;\sigma^2)=0$ it is positive on $(0,\lambda_1(\sigma))$. Then, $g_Y'(.;\sigma^2)$ is decreasing on $(\lambda_1(\sigma),\lambda_2(\sigma))$ and then increasing on $(\lambda_2(\sigma),+\infty)$. In particular $g_Y'(.;\sigma^2)$ admits a unique local minimum at $\lambda=\lambda_2(\sigma)$ on $\mathbb{R}_+^*$. Consequently, if $g_Y'(\lambda_2(\sigma);\sigma^2)\geq 0$, then $g_Y(.;\sigma^2)$ is non-negative on $\mathbb{R}_+$ and thus since $g_Y(0;\sigma^2)=0$, we get that $g_Y(.;\sigma^2)$ is non-negative on $\mathbb{R}_+$. Alternatively, if $g_Y'(\lambda_2(\sigma);\sigma^2)<0$, then $g_Y'(.;\sigma^2)$ has exactly two zeros $\lambda_1(\sigma)<\lambda_l(\sigma)<\lambda_r(\sigma)<\lambda_2(\sigma)$ and it is negative on $(\lambda_l(\sigma),\lambda_r(\sigma))$ and positive on $(0,\lambda_l(\sigma))\cup(\lambda_r(\sigma),+\infty)$. Consequently, $g_Y(.;\sigma^2)$ has exactly one local minimum on $\mathbb{R}_+^*$ denoted $\lambda_m(\sigma)$ which is necessarily located in  $(\lambda_1(\sigma),\lambda_2(\sigma))$.
+Next, let us observe that:
+\beq \partial_\sigma[g_Y'(\lambda_2(\sigma);\sigma^2)]=g_Y''(\lambda_2(\sigma);\sigma^2) \partial_\sigma[\lambda_2(\sigma)]+ 2\sigma\lambda_2(\sigma)=2\sigma\lambda_2(\sigma)>0\eeq
+Thus, the local minimum of $g_Y'(.;\sigma^2)$ is an increasing function of $\sigma$, so that if it is null for a value $\sigma_1$, then it is positive for $\sigma>\sigma_1$ and negative for $\sigma<\sigma_1$.
+Finally, let us observe that
+\beq  \partial_\sigma[g_Y(\lambda_m(\sigma);\sigma^2)]=g_Y'(\lambda_m(\sigma);\sigma^2) \partial_\sigma[\lambda_m(\sigma)]+ \sigma\lambda_m(\sigma)^2=\sigma\lambda_m(\sigma)^2>0\eeq
+so that $\lambda_m(\sigma)$ is a increasing function of $\sigma$. Let us denote $(\lambda_c,\sigma_c^2)\in \mathbb{R}_+^*\times \left(\operatorname{Var}[Y],+\infty\right)$ a solution of $g_Y(\lambda,\sigma^2)=0=g_Y'(\lambda,\sigma^2)$, then for $\sigma<\sigma_c$, we have $g_Y(\lambda_m(\sigma);\sigma^2)<0$ while for $\sigma>\sigma_c$, we have $g_Y(\lambda_m(\sigma);\sigma^2)>0$. Since $g_Y(.;\sigma^2)$ has only a unique local minimum $\lambda_m(\sigma)$ and a local maximum on $\mathbb{R}_+^*$ which is always strictly positive, we conclude that we cannot have another solution of $g_Y(\lambda,\sigma^2)=0=g_Y'(\lambda,\sigma^2)$ with $\lambda\in \mathbb{R}_+^*$. When there is no solution, we have $g_Y(\lambda_m(\sigma);\sigma^2)>0$ so that $g_Y(.;\sigma^2)$ is non-negative on $\mathbb{R}_+^*$. When we have a unique solution $(\lambda_c,\sigma_c^2)$, then $g_Y(\lambda_m(\sigma);\sigma^2)>0$ for $\sigma>\sigma_c$, $g_Y(\lambda_m(\sigma_c);\sigma_c^2)=0$ and $g_Y(\lambda_m(\sigma);\sigma^2)<0$ for $\sigma<\sigma_c$ concluding the proof.
 \end{proof}
 
-
 \section{Application to 3-mass distributions}\label{sec:3-mass}
-\subsection{Symmetric case of 3-mass distributions}\label{subsec;symmthreepoints}
+
+In this section, we undertake a detailed analysis of the sub-Gaussian properties of three-mass discrete distributions supported on $\{-a,0,a\}$. Our objective is to characterize the optimal variance proxy $\sigma^2_{\mathrm{opt}}$ and to delineate the regimes in which strict sub-Gaussianity holds.  
+
+In the \textbf{symmetric case}, where the outer masses are equally weighted, we establish two distinct behaviors. When the parameter satisfies $p \geq \tfrac{1}{6}$, the distribution is strictly sub-Gaussian and the optimal variance proxy coincides with the variance,
+\[
+\sigma^2_{\mathrm{opt}} = \mathrm{Var}[X] = 2p.
+\]
+In contrast, for $p < \tfrac{1}{6}$, strict sub-Gaussianity fails, and the optimal variance proxy is determined by a critical parameter $\lambda_c > 0$ solving a coupled system of equations.  
+
+In the \textbf{asymmetric case}, where the mass probabilities at $-a$ and $a$ are not equal, the situation is more intricate. If the central mass satisfies $p_3 \leq 4\sqrt{p_1p_2}$, then an explicit closed-form expression is available:
+\[
+\sigma^2_{\mathrm{opt}} = \frac{2(p_2 - p_1)}{\ln\!\left(\tfrac{p_2}{p_1}\right)}.
+\]
+When $p_3 > 4\sqrt{p_1p_2}$, the characterization of $\sigma^2_{\mathrm{opt}}$ requires the analysis of a nonlinear equation whose solution yields the critical value determining the transition between variance proxies.  
+ 
+%\textcolor{red}{Olivier: Can we put a summary of all important results of the asymmetric case. And a graph summarizing the situation.}
+\subsection{Symmetric case of 3-mass distribution}\label{subsec;symmthreepoints}
 \subsubsection{Notations and main results}
-Let $X$ be a random variable such that $X(\Omega)=\{-a,0,a\}$ and 
+Let $X$ be a discrete random variable on the set $\{-a,0,a\}$ where a is a fixed positive real number and
 \begin{equation}
     \P(X=-a)=p\,,\, \P(X=0)=1-2p\,,\, \P(X=a)=p
 \end{equation}
-where $p\in \left( 0,\frac{1}{2}\right)$ and $a>0$. We may define $Y=\frac{1}{a}X$ and use the fact that $\sigma_{\mathrm{opt}}[Y]=a \sigma_{\mathrm{opt}}[X]$. Thus, we may restrict to $a=1$. We have
+where $p\in \left( 0,\frac{1}{2}\right)$.
+We may define $Y=\frac{1}{a}X$ and use the fact that $\sigma_{\mathrm{opt}}[Y]=\frac{1}{a}\, \sigma_{\mathrm{opt}}[X]$. Thus, we may restrict to $a=1$.\\
+\begin{figure}[h!]
+    \centering
+    \begin{tikzpicture}[scale=1.2]
+        % Axe horizontal
+        \draw[->] (-2,0) -- (2,0);
+        % Masses
+        \draw[black, thick] (-1,0) -- (-1,1) node[above, black] {$p$};
+        \draw[black, thick] (0,0) -- (0,1.5) node[above, black] {$1 - 2p$};
+        \draw[black, thick] (1,0) -- (1,1) node[above, black] {$p$};
+        % Points
+        \fill[black] (-1,1) circle (2pt);
+        \fill[black] (0,1.5) circle (2pt);
+        \fill[black] (1,1) circle (2pt);
+           \node at (-1,-0.2) {$-a$};
+        \node at (0,-0.2) {$0$};
+        \node at (1,-0.2) {$a$};
+    \end{tikzpicture}
+    \caption{Probability mass function of the symmetric 3-mass distribution.}
+    \label{fig:three_mass_distribution}
+\end{figure}
+
+In the special case where $p=\frac{1}{2}$ the random variable $X$ reduces to the symmetric Rademacher distribution:
+\begin{equation}
+    \P(X=-1)= \P(X=1)= \frac{1}{2}
+\end{equation}
+This distribution is known to be strictly sub-Gaussian, as shown in \cite{arbel2020strict}.\\
+Under these restrictions, we have
 \beq \mu:=\E[Y]=0\,\,,\,\, \sigma^2:=\operatorname{Var}[Y]=2p\eeq
-For any $\sigma>0$, we have that $\sigma$ is a variance proxy of $Y$ if and only if
-\beq \E\left[e^{\lambda (Y-\mu)}\right]=p e^{\lambda }+ pe^{-\lambda } +1-2p\leq e^{\frac{\lambda^2\sigma^2}{2}} \,\, ,\,\, \forall \, \lambda\in \mathbb{R}\eeq
+For any $\sigma>0$, we have that $\sigma^2$ is a variance proxy of $Y$ if and only if
+\beq \E\left[e^{\lambda (Y-\mu)}\right]=p e^{\lambda }+ pe^{-\lambda } +1-2p\leq e^{\frac{\lambda^2\sigma^2}{2}} \,\, ,\,\, \forall \, \lambda\in \mathbb{R} .\eeq
 This inequality is equivalent to
-\beq g_{\sigma,p}(\lambda):=\frac{\lambda^2\sigma^2}{2}-\ln( 2p\cosh \lambda +1-2p)\geq 0 \,\,,\,\,  \forall \, \lambda\in \mathbb{R}\eeq
+\beq g_{\sigma,p}(\lambda):=\frac{\lambda^2\sigma^2}{2}-\ln( 2p\cosh \lambda +1-2p)\geq 0 \,\,,\,\,  \forall \, \lambda\in \mathbb{R} .\eeq
 Since $g_{\sigma,p}$ is an even function of $\lambda$, this is equivalent to 
-\beq g_{\sigma,p}(\lambda):=\frac{\lambda^2\sigma^2}{2}-\ln( 2p\cosh \lambda +1-2p)\geq 0 \,\,,\,\,  \forall \, \lambda\in \mathbb{R}_+\eeq
-The general theory implies that $\operatorname{Var}[Y]=2p$ is a lower bound for the optimal variance proxy. In other words, if $\sigma<\sqrt{2p}$ then $\sigma$ is not a variance proxy. Consequently, we shall only consider $\sigma\geq \sqrt{2p}$ in the following proof.
+\beq g_{\sigma,p}(\lambda):=\frac{\lambda^2\sigma^2}{2}-\ln( 2p\cosh \lambda +1-2p)\geq 0 \,\,,\,\,  \forall \, \lambda\in \mathbb{R}_+ .\eeq
+The general theory implies that $\operatorname{Var}[Y]=2p$ is a lower bound for the optimal variance proxy. Consequently, we shall only consider $\sigma\geq \sqrt{2p}$ in the following proof.
 \medskip
 
 The function $g_{\sigma,p}$ is obviously a smooth function of $(\lambda,\sigma,p)$ and we have
@@ -293,25 +361,44 @@ where $\lambda_c\in (\lambda_0,+\infty)$ is the unique solution in $\lambda_c$, 
 \caption{Numeric plot of the optimal variance proxy (black dots) for $0<p<\frac{1}{6}$. In blue is the variance $2p$ and in red is the upper bound $\sigma_{\text{up}_2}(p):=\frac{(1-2p)^2}{4(1-4p)}$. In green is the numeric evaluation of the upper bound $\sigma_{\text{up2}}^2$.}
 \label{241029160152}
 \end{figure}
+The sub-Gaussian behavior of \(X\) exhibits two distinct regimes as \(p\) varies.
+The following theorem summarizes both regimes.
 
+\bigskip
 
-\subsubsection{Refinements and comments}
+\begin{theorem}[Optimal variance proxy for symmetric three-mass distribution]\label{TheoSymmetric3mass}
+Let $X$ be a discrete random variable on the set $\{-a,0,a\}$ where $a > 0$ \text{ and }  $\P(X=-a)=p\,,\, \P(X=0)=1-2p\,,\, \P(X=a)=p$  where $p\in \left( 0,\frac{1}{2}\right)$. Then $X$ is:
+
+\begin{enumerate}
+\item[\textbf{(i)}] \emph{Strictly sub-Gaussian regime.}
+If \(p \in \left[\tfrac16, \tfrac12\right)\), then \(X\) is strictly sub-Gaussian, i.e.,
+\beq \sigma_{\mathrm{opt}}^{2} = \operatorname{Var}(X) = 2p. \eeq
+
+\item[\textbf{(ii)}] \emph{Non-strictly sub-Gaussian regime.}
+If \(p \in (0, \tfrac16)\), then \(X\) is not strictly sub-Gaussian. In this case, the optimal variance proxy is given by:
+\beq \sigma_{\mathrm{opt}}^{2} = \frac{2p\,\sinh(\lambda_{c})}{\lambda_{c}\,\left(2p\cosh(\lambda_{c}) + 1 - 2p\right)}, \eeq
+where \(\lambda_{c} \in (\lambda_{0}, +\infty)\) is the unique solution to \beq p\,\lambda_{c}\,\sinh(\lambda_{c}) - \left(1 - 2p + 2p\cosh(\lambda_{c})\right) \ln\left(1 - 2p + 2p\cosh(\lambda_{c})\right) = 0, \eeq
+and \beq \lambda_{0} = \operatorname{arcosh}\left(\frac{1 - 4p - 4p^{2}}{2p(1 - 2p)}\right) > 0. \eeq
+\end{enumerate}
+\end{theorem}
+
+\begin{comment}
+\textcolor{blue}{Olivier: We should highlight the fact that the existence of two regimes: one strictly subGaussian and the other not depending on the value of $p$ is something quite remarkable. Also a theorem merging both cases would help the reading.}
+
+\textcolor{red}{\subsubsection{Refinements and comments}
 It is easy to express $\sigma_{\mathrm{opt}}^2$ in terms of $\lambda_c$. It gives a complicated equation for $\lambda_c$:
     \beq p\lambda_c \sinh \lambda_c -(1-2p+2p\cosh \lambda_c)\ln (1-2p+2p\cosh \lambda_c)=0\eeq 
     which to my knowledge does not admit explicit formulas but can easily be solved (and there is a unique zero on $(\lambda_0,+\infty)$) numerically. The knowledge of $\lambda_c$ implies then that
     \beq \sigma_{\mathrm{opt}}^2=\frac{2p\sinh \lambda_c }{\lambda_c(2p \cosh \lambda_c +1-2p)} \eeq 
-
 \medskip
-
 The most important point is that we have two regimes which is quite unusual. For $p\in \big[\frac{1}{6},\frac{1}{2}\big)$ we have strict-sub-Gaussianity while for $p\in \left(0,\frac{1}{6}\right)$ we no longer have sub-Gaussianity. This fact can be proved and also we can characterize the optimal variance proxy has the unique solution of a couple of equations. This can be solved numerically since we also have a lower bound (variance) and two upper bounds: one is simple but no so precise and the second one requires to solve numerically an explicit equation but is more precise. I think it gives a good story to tell. 
-
 \medskip
-
 Other cases that we may look after:
 \begin{itemize}
     \item The case where we have $X(\Omega)=\{-a,0,a\}$ but with different probability in $-a$ and $a$ (i.e. $\P(X=-a)=p_1$ and $\P(X=a)=p_2$). In this case, we can also scale out $a$ so that we get two parameters. Be careful that the mean is no longer $0$ in this case. We get a compact space of parameters that is 2 dimensional so that we can at least give a plot of $\sigma_{\mathrm{opt}}^2(p_1,p_2)$ as a $3D$ picture. Maybe the analysis can be carried out up to some extent. In particular the strict sub-Gaussianity cases should be characterized.
     \item The generic case. After translation and dilation, we can take $X(\Omega)=\{-1,0,1+\epsilon\}$ with $\epsilon\in (-1,+\infty)$. In this case, we have $3$ parameters: $p_1$,$p_2$ and $\epsilon$. This complicates the numeric plots. The exact analysis seems also difficult but maybe we can find some conditions where to have strict-sub-Gaussianity. 
-\end{itemize}
+\end{itemize}}
+\end{comment}
 
 \subsection{Asymmetric case of 3-mass distributions}\label{subsec;asymmthreepoints}
 
@@ -319,7 +406,30 @@ Let $X$ be a random variable such that $X(\Omega)=\{-a,0,a\}$ and
 \begin{equation}
     \P(X=-a)=p_1\,,\, \P(X=0)=p_3 = 1-p_1-p_2\,,\, \P(X=a)=p_2
 \end{equation}
-where $p_1, p_2\in \left( 0,1\right) \text{ and since } p_3=0$ corresponds to two masses case  we will consider $p_3 > 0$ and $a>0$. We may define $Y=\frac{1}{a}X$ and use the fact that $\sigma_{\mathrm{opt}}[X]=a \sigma_{\mathrm{opt}}[X]$. Thus, we may restrict to $a=1$. We also may assume $p_2 \geq p_1$ and by considering $Y=-X$. We have
+where $p_1, p_2\in \left( 0,1\right) \text{ and since } p_3=0$ corresponds to two masses case  we will consider $p_3 > 0$ and $a>0$. We may define $Y=\frac{1}{a}X$ and use the fact that $\sigma_{\mathrm{opt}}[X]=a \sigma_{\mathrm{opt}}[X]$. Thus, we may restrict to $a=1$. We also may assume $p_2 \geq p_1$.  
+
+\begin{figure}[h!]
+    \centering
+    \begin{tikzpicture}[scale=1.2]
+        % Axe horizontal
+        \draw[->] (-2,0) -- (2,0);
+        % Masses
+        \draw[black, thick] (-1,0) -- (-1,0.4) node[above, black] {$p_1$};
+        \draw[black, thick] (0,0) -- (0,1.5) node[above, black] {$1-p_1-p_2$};
+        \draw[black, thick] (1,0) -- (1,1) node[above, black] {$p_2$};
+        % Points
+        \fill[black] (-1,0.4) circle (2pt);
+        \fill[black] (0,1.5) circle (2pt);
+        \fill[black] (1,1) circle (2pt);
+           \node at (-1,-0.2) {$-a$};
+        \node at (0,-0.2) {$0$};
+        \node at (1,-0.2) {$a$};
+    \end{tikzpicture}
+    \caption{Probability mass function of the asymmetric 3-mass distribution.}
+    \label{fig:three_mass_distribution}
+\end{figure}
+
+By considering $Y=-X$ we have
 \beq \mu:=\E[Y]=-p_1+p_2 \geq 0\,\,,\,\, \sigma^2:=\operatorname{Var}[Y]=p_1+p_2-(-p_1+p_2)^2\eeq
 For any $\sigma>0$, we have that $\sigma$ is a variance proxy of $Y$ if and only if
 \beq \E\left[e^{\lambda Y}\right]=p_1 e^{-\lambda }+ p_2e^{\lambda } +1-p_1-p_2\leq e^{(\frac{\lambda^2\sigma^2}{2}+\lambda \mu)} \,\, ,\,\, \forall \, \lambda\in \mathbb{R}\eeq
@@ -337,11 +447,11 @@ The function $g_{\sigma,p}$ a smooth function of $(\lambda,\sigma,p)$ and its fi
 
 \bea g^{'}_{\sigma,p}(\lambda)&=&\lambda \sigma^2 -\frac{u_1(\lambda)}{u_0(\lambda)} + \mu \cr 
 g^{(2)}_{\sigma,p}(\lambda)&=& \sigma^2-\frac{u_0(\lambda)p_3-p_3^2+4p_1p_2}{u_0(\lambda)^2}\cr
-g^{(3)}_{p}(\lambda)&=& u_1(\lambda)\frac{p_3u_0(\lambda)+8p_1p_2-2p_3^2}{u_0(\lambda)^3}
+g^{(3)}_{\sigma, p}(\lambda)&=& u_1(\lambda)\frac{p_3u_0(\lambda)+8p_1p_2-2p_3^2}{u_0(\lambda)^3}
 \eea
-Note in particular that $g^{(3)}_{p}$ does not depend on $\sigma$. Moreover, $g^{(3)}_{p}$ can be written as
-\beq\label{g3} g^{(3)}_{p}(\lambda) = \frac{u_1(\lambda)N_{p_1,p_2}(\lambda)}{u_0(\lambda)^3} \eeq
-where $N_{p_1,p_2}(\lambda) := p_3u_0(\lambda)+8p_1p_2-2p_3^2$. Observe that $u_0(\lambda)$ is strictly positive on $\mathbb{R}$. Therefore, the function $g^{(3)}$ and $N_{p_1, p_2} u_1$ share the same sign. We know that $u_1$ changes sign at $\lambda_0 := -\frac{1}{2}\ln(\frac{p_2}{p_1})$ assuming that $p_2\geq p_1$ we have $\lambda_0 \leq 0$. Hence, to determine the sign of $g^{(3)}$, it remains to analyze the sign of $N_{p_1, p_2}$. For this purpose, it is sufficient to  study the sign of the polynomial
+Note in particular that $g^{(3)}_{\sigma, p}$ does not depend on $\sigma$. Moreover, $g^{(3)}_{\sigma, p}$ can be written as
+\beq\label{g3} g^{(3)}_{\sigma, p}(\lambda) = \frac{u_1(\lambda)N_{p_1,p_2}(\lambda)}{u_0(\lambda)^3} \eeq
+where $N_{p_1,p_2}(\lambda) := p_3u_0(\lambda)+8p_1p_2-2p_3^2$. Observe that $u_0(\lambda)$ is strictly positive on $\mathbb{R}$. Therefore, the function $g_{\sigma, p}^{(3)}$ and $u_1 N_{p_1, p_2} $ share the same sign. We know that $u_1$ changes sign at $\lambda_0 := -\frac{1}{2}\ln(\frac{p_2}{p_1})$ assuming that $p_2\geq p_1$ we have $\lambda_0 \leq 0$. Hence, to determine the sign of $g^{(3)}_{\sigma, p}$, it remains to analyze the sign of $N_{p_1, p_2}$. For this purpose, it is sufficient to  study the sign of the polynomial
 \bea P(X) :=p_2p_3X^2+(8p_1p_2-p_3^2)X+p_3p_1, \text{where}\  X = e^{\lambda} > 0.\eea 
 To determine the sign of $P(X)$, we compute its discriminant:
 \bea \Delta = (p_3^2)^2 - 20p_1p_2(p_3)^2 + 64p_1^2p_2^2= (p_3^2-4p_1p_2)(p_3^2-16p_1p_2) \eea 
@@ -358,7 +468,7 @@ In this case, we shall prove the following theorem.
 \beq g_{\sigma,p}(\lambda)=0 \text{ and } g^{'}_{\sigma,p}(\lambda) = 0\eeq
 Moreover, the case $p_3\leq 4\sqrt{p_1p_2}$ is equivalent to the fact that $\Delta\leq 0$ or $\Delta>0$ with $P$ admitting two strictly negative roots (the sum of roots ($X_1,X_2)$ is $X_1+X_2 = \frac{p_3^2-8p_1p_2}{p_2p_3} < 0$ and the product of roots $X_1 X_2 = \frac{p_1}{p_2}>0$). Thus, the function $N_{p_1,p_2}$ is strictly positive on $\mathbb{R}$. Consequently, $g^{(3)}_{\sigma,p}$ and $u_1(\lambda)$ share the same sign and hence $g_{\sigma,p}^{(3)}$ is strictly negative on $(-\infty,\lambda_0)$ and strictly positive on $(\lambda_{0}, +\infty)$. Furthermore, since $\lim_{\lambda\to \pm \infty} g^{(2)}_{\sigma, p}(\lambda)=\sigma^2$, it follows that $\lambda_0$ is a global minimum of $g^{(2)}_{\sigma, p}$ with value $g^{(2)}_{\sigma,p}(\lambda_{0})=\sigma^2-\frac{2\sqrt{p_1p_2}}{p_3+2\sqrt{p_1p_2}}$. If $\sigma^2\geq\frac{2\sqrt{p_1p_2}}{p_3+2\sqrt{p_1p_2}}$ , then $g^{(2)}_{\sigma,p}$ is non-negative on $\mathbb{R}$ and so $g'_{\sigma,p}$ is a strictly increasing function. Since $g'_{\sigma,p}(0)=0$, $g'_{\sigma,p}$ is negative on $\mathbb{R}_-$ and positive on $\mathbb{R}_+$ and finally $g_{\sigma,p}$ has a global minimum at $\lambda=0$ which is precisely null so it is positive and $\sigma^2$ is a variance proxy. This gives that $\frac{2\sqrt{p_1p_2}}{p_3+2\sqrt{p_1p_2}}$ is an upper bound for the optimal variance proxy. 
 
-On the contrary, if $\sigma^2<\frac{2\sqrt{p_1p_2}}{p_3+2\sqrt{p_1p_2}}$, then $g^{(2)}_{\sigma, p}$ has two distinct zeros $(\lambda_1(\sigma),\lambda_2(\sigma))$ such that $\lambda_1(\sigma)<\lambda_0<\lambda_2(\sigma)\leq 0$. Moreover, since $g_{\sigma,p}''(.;\sigma^2)$ is positive on $\mathbb{R}_+^*$, we get that $g_{\sigma,p}(.;\sigma^2)$ is always positive on $\mathbb{R}_+^*$ for any $\sigma^2\in \left(\operatorname{Var}[Y],\frac{2\sqrt{p_1p_2}}{p_3+2\sqrt{p_1p_2}} \right) $. Since, we have observed that the equations $g_{\sigma,p}(\lambda,\sigma^2)=0=g_{\sigma,p}'(\lambda,\sigma^2)$ admits $\left(2\lambda_0,\frac{2(p_2-p_1)}{\ln \frac{p_2}{p_1}}\right)\in \mathbb{R}_-^*\times \left(\operatorname{Var}[Y],+\infty\right)$ as solution, application of \autoref{LemmaNumber} on $\mathbb{R}_-^*$ implies that $g_{\sigma,p}(.;\sigma^2)$ is non-negative on $\mathbb{R}_-$ if and only if $\sigma^2\geq \frac{2(p_2-p_1)}{\ln \frac{p_2}{p_1}} $. Thus the optimal variance proxy in this case is $\sigma_{\mathrm{opt}}^2= \frac{2(p_2-p_1)}{\ln \frac{p_2}{p_1}}$ . 
+On the contrary, if $\sigma^2<\frac{2\sqrt{p_1p_2}}{p_3+2\sqrt{p_1p_2}}$, then $g^{(2)}_{\sigma, p}$ has two distinct zeros $(\lambda_1(\sigma),\lambda_2(\sigma))$ such that $\lambda_1(\sigma)<\lambda_0<\lambda_2(\sigma)\leq 0$. Moreover, since $g_{\sigma,p}''(.;\sigma^2)$ is positive on $\mathbb{R}_+^*$, we get that $g_{\sigma,p}(.;\sigma^2)$ is always positive on $\mathbb{R}_+^*$ for any $\sigma^2\in \left(\operatorname{Var}[Y],\frac{2\sqrt{p_1p_2}}{p_3+2\sqrt{p_1p_2}} \right) $. Since, we have observed that the equations $g_{\sigma,p}(\lambda,\sigma^2)=0=g_{\sigma,p}'(\lambda,\sigma^2)$ admits $\left(2\lambda_0,\frac{2(p_2-p_1)}{\ln \frac{p_2}{p_1}}\right)\in \mathbb{R}_-^*\times \left(\operatorname{Var}[Y],+\infty\right)$ as solution, application of \autoref{LemmaMerged} on $\mathbb{R}_-^*$ implies that $g_{\sigma,p}(.;\sigma^2)$ is non-negative on $\mathbb{R}_-$ if and only if $\sigma^2\geq \frac{2(p_2-p_1)}{\ln \frac{p_2}{p_1}} $. Thus the optimal variance proxy in this case is $\sigma_{\mathrm{opt}}^2= \frac{2(p_2-p_1)}{\ln \frac{p_2}{p_1}}$ . 
 
 \end{proof}
 
@@ -409,22 +519,24 @@ Thus we get  $\lambda_0 < 0 <\lambda_- <   \lambda_+$ under the condition $p_3^2
 %\begin{proof}The proof is done by straightforward computations and inequalities and is presented in \autoref{AppendixLemma}.
 %\end{proof}
 
-We shall now use split the analysis of the sign of $g(.;\sigma^2)$ on $\mathbb{R}_-^*$ and $\mathbb{R}_+^*$. Let us first observe that the discussion made for $\mathbb{R}_-^*$ in the proof of \autoref{TheoRegime1} is still valid. Thus, $g(.;\sigma^2)$ is non-negative on $\mathbb{R}_-^*$ if and only if $\sigma^2\geq \frac{2(p_2-p_1)}{\ln \frac{p_2}{p_1}}$. Let us now discuss the situation on $\mathbb{R}_+^*$. From \autoref{lemma:lambda_ordering} and \eqref{g3} we get that $g^{(3)}$ is negative on $(-\infty,\lambda_0)\cup\left(\lambda_-(\sigma),\lambda_+(\sigma)\right)$  and positive on $(\lambda_0,\lambda_-(\sigma))\cup\left(\lambda_+(\sigma),+\infty\right)$. Consequently, $g''(.;\sigma^2)$ is increasing on $(0,\lambda_-)$ and since $g''(0;\sigma^2)=0$ is it thus positive on this interval. Then, $g''(.;\sigma^2)$ is decreasing on $(\lambda_-(\sigma),\lambda_+(\sigma))$ and then increasing on $(\lambda_+(\sigma),+\infty)$ with $g''(+\infty;\sigma^2)=\sigma^2>0$. Thus, there are only two possible cases: either $g''(\lambda_+(\sigma);\sigma^2)\geq 0$ and then $g(.;\sigma^2)$ is strictly convex and positive on $\mathbb{R}_+^*$ or $g''(\lambda_+(\sigma);\sigma^2)<0$ in which case $g''(.\sigma^2)$ has exactly two zeros $(\lambda_1(\sigma),\lambda_2(\sigma))$ on $\mathbb{R}_+^*$ such that $\lambda_-(\sigma)<\lambda_1(\sigma)<\lambda_+(\sigma)<\lambda_2(\sigma)$. We may thus apply \autoref{LemmaNumber} whose conclusion depends on the existence of a solution $(\lambda,\sigma^2)\in \left(\lambda_-,+\infty\right)*\times \left(\operatorname{Var}[Y],+\infty\right)$ of the equation $g(\lambda;\sigma^2)=0=g'(\lambda;\sigma^2)$. This set of equations is equivalent to
+We now analyze the sign of the function  $g_{\sigma, p}(.;\sigma^2)$  separately  on $\mathbb{R}_-^*$ and $\mathbb{R}_+^*$. Let us first observe that the discussion made for $\mathbb{R}_-^*$ in the proof of \autoref{TheoRegime1} is still valid. Thus, $g_{\sigma, p}(.;\sigma^2)$ is non-negative on $\mathbb{R}_-^*$ if and only if $\sigma^2\geq \frac{2(p_2-p_1)}{\ln \frac{p_2}{p_1}}$. Let us now discuss the situation on $\mathbb{R}_+^*$. From \autoref{lemma:lambda_ordering} and \eqref{g3} we get that $g^{(3)}$ is negative on $(-\infty,\lambda_0)\cup\left(\lambda_-(\sigma),\lambda_+(\sigma)\right)$  and positive on $(\lambda_0,\lambda_-(\sigma))\cup\left(\lambda_+(\sigma),+\infty\right)$. Consequently, $g^{(2)}_{\sigma, p}(.;\sigma^2)$ is increasing on $(0,\lambda_-)$ and since $g^{(2)}_{\sigma, p}(0;\sigma^2)=0$ is it thus positive on this interval. Then, $g_{\sigma, p}^{(2)}(.;\sigma^2)$ is decreasing on $(\lambda_-(\sigma),\lambda_+(\sigma))$ and then increasing on $(\lambda_+(\sigma),+\infty)$ with $g_{\sigma, p}^{(2)}(+\infty;\sigma^2)=\sigma^2>0$. Thus, there are only two possible cases: either $g_{\sigma, p}^{(2)}(\lambda_+(\sigma);\sigma^2)\geq 0$ and then $g_{\sigma, p}(.;\sigma^2)$ is strictly convex and positive on $\mathbb{R}_+^*$ or $g^{(2)}_{\sigma, p}(\lambda_+(\sigma);\sigma^2)<0$ in which case $g_{\sigma, p}^{(2)}(.\sigma^2)$ has exactly two zeros $(\lambda_1(\sigma),\lambda_2(\sigma))$ on $\mathbb{R}_+^*$ such that $\lambda_-(\sigma)<\lambda_1(\sigma)<\lambda_+(\sigma)<\lambda_2(\sigma)$. We may thus apply \autoref{LemmaMerged} whose conclusion depends on the existence of a solution $(\lambda,\sigma^2)\in \left(\lambda_-,+\infty\right)*\times \left(\operatorname{Var}[Y],+\infty\right)$ of the equation $g_{\sigma, p}(\lambda;\sigma^2)=0=g_{\sigma, p}'(\lambda;\sigma^2)$. This set of equations is equivalent to
 \beq \sigma^2=\frac{1}{\lambda}\left(\frac{u_1(\lambda)}{u_0(\lambda)}-\mu\right)=\frac{1}{\lambda}\left(p_1-p_2+\frac{p_2e^\lambda-p_1e^{-\lambda}}{p_1e^{-\lambda}+p_2e^{\lambda}+1-p_1-p_2}\right)
 \eeq
 and $\lambda$ positive solution of
 \beq \lambda \frac{u_1(\lambda)}{u_0(\lambda)}- 2\ln (u_0(\lambda))+\lambda \mu=0\eeq
 i.e.
 \beq \label{EqF} F(\lambda):=\lambda u_1(\lambda)-2u_0(\lambda)\ln u_0(\lambda)+ \lambda u_0(\lambda)(p_2-p_1)=0\eeq
-From \autoref{LemmaNumber2}, $F(\lambda)=0$ has no solution on $\mathbb{R}_+^*$ such that $\sigma^2=\frac{1}{\lambda}\left(\frac{u_1(\lambda)}{u_0(\lambda)}-\mu\right)<\operatorname{Var}[Y]$. Thus, we have two cases:
+From \autoref{LemmaMerged}, $F(\lambda)=0$ has no solution on $\mathbb{R}_+^*$ such that $\sigma^2=\frac{1}{\lambda}\left(\frac{u_1(\lambda)}{u_0(\lambda)}-\mu\right)<\operatorname{Var}[Y]$. Thus, we have two cases:
 \begin{itemize}
-    \item If $F$ has a positive zero $\lambda_c>0$ then \autoref{LemmaNumber} implies that this zero is unique on $\mathbb{R}_+^*$ and we get that $\sigma_c^2=\frac{1}{\lambda_c}\left(\frac{u_1(\lambda_c)}{u_0(\lambda_c)}-\mu\right)\geq\operatorname{Var}[Y]$. \autoref{GeneralCharac} implies that the optimal variance proxy is given by
+    \item If $F$ has a positive zero $\lambda_c>0$ then \autoref{LemmaMerged} implies that this zero is unique on $\mathbb{R}_+^*$ and we get that $\sigma_c^2=\frac{1}{\lambda_c}\left(\frac{u_1(\lambda_c)}{u_0(\lambda_c)}-\mu\right)\geq\operatorname{Var}[Y]$. \autoref{GeneralCharac} implies that the optimal variance proxy is given by
     \beq \sigma_{\mathrm{opt}}^2=\max\left(\frac{2(p_2-p_1)}{\ln \frac{p_2}{p_1}}, \frac{1}{\lambda_c}\left(\frac{u_1(\lambda_c)}{u_0(\lambda_c)}-(p_2-p_1)\right) \right)\eeq
-    \item If $F$ has no zero on $\mathbb{R}_+^*$ then $g(.;\sigma^2)$ is positive on $\mathbb{R}_+^*$ and thus the optimal variance proxy is given by $\sigma^2_{\text{opt}}=\frac{2(p_2-p_1)}{\ln \frac{p_2}{p_1}}$.
+    \item If $F$ has no zero on $\mathbb{R}_+^*$ then $g_{\sigma, p}(.;\sigma^2)$ is positive on $\mathbb{R}_+^*$ and thus the optimal variance proxy is given by $\sigma^2_{\text{opt}}=\frac{2(p_2-p_1)}{\ln \frac{p_2}{p_1}}$.
 \end{itemize}
 
-\begin{remark}Note that $\underset{\lambda\to +\infty}{\lim} F(\lambda)=-\infty$ and $F(\lambda)=\frac{1}{6}M_3[Y]\lambda^3+\frac{1}{4}\left(\frac{1}{3}M_4[Y]-\operatorname{Var}[Y]^2\right)\lambda^4+ O(\lambda^5)$, where $M_3:=\mathbb{E}[(Y-\mu)^3]$ and $M_4:=\mathbb{E}[(Y-\mu)^4]$. Thus, a sufficient condition for $F$ to admit a positive zero is that $M_3[Y]>0$ or $\left[M_3[Y]=0 \text{ and } \frac{1}{3}M_4[Y]\operatorname{Var}[Y]^2>0\right]$. In particular for $p_1=p_2=p$, we have that $F(\lambda)=\frac{1}{6}p(1-6p)\lambda^4+O(\lambda^5)$ so that for $p>\frac{1}{6}$ (which is the equivalent condition to $p_3>4\sqrt{p_1p_2}$ in this case) $F$ always has a unique positive zero $\lambda_c$ and the corresponding variance $\sigma_c^2=\frac{1}{\lambda_c}\frac{u_1(\lambda_c)}{u_0(\lambda_c)}$ is always greater than $2p=\operatorname{Var}[Y]$ and hence the optimal variance proxy is always $\sigma_{\mathrm{opt}}^2=\sigma_c^2=\frac{1}{\lambda_c}\frac{u_1(\lambda_c)}{u_0(\lambda_c)}$ in the symmetric case $p_1=p_2=p$.
+\begin{remark}Note that $\underset{\lambda\to +\infty}{\lim} F(\lambda)=-\infty$ and $F(\lambda)=\frac{1}{6}M_3[Y]\lambda^3+\frac{1}{4}\left(\frac{1}{3}M_4[Y]-\operatorname{Var}[Y]^2\right)\lambda^4+ O(\lambda^5)$, where $M_3[Y]:=\mathbb{E}[(Y-\mu)^3]$ and $M_4[Y]:=\mathbb{E}[(Y-\mu)^4]$. Thus, a sufficient condition for $F$ to admit a positive zero is that $M_3[Y]>0$ or $\left[M_3[Y]=0 \text{ and } \frac{1}{3}M_4[Y]\operatorname{Var}[Y]^2>0\right]$. In particular for $p_1=p_2=p$, we have that $F(\lambda)=\frac{1}{6}p(1-6p)\lambda^4+O(\lambda^5)$ so that for $p>\frac{1}{6}$ (which is the equivalent condition to $p_3>4\sqrt{p_1p_2}$ in this case) $F$ always has a unique positive zero $\lambda_c$ and the corresponding variance $\sigma_c^2=\frac{1}{\lambda_c}\frac{u_1(\lambda_c)}{u_0(\lambda_c)}$ is always greater than $2p=\operatorname{Var}[Y]$ and hence the optimal variance proxy is always $\sigma_{\mathrm{opt}}^2=\sigma_c^2=\frac{1}{\lambda_c}\frac{u_1(\lambda_c)}{u_0(\lambda_c)}$ in the symmetric case $p_1=p_2=p$.
 \end{remark}
+
+{\textbf{Outline.}} This paper focuses on three-mass distributions with symmetric support $\{-a, 0, a\}$, in both symmetric and asymmetric cases. To address a more general setting, one may apply translation and dilation to consider a random variable $X$ with support $\{-1, 0, 1+\epsilon\}$, where $\epsilon \in (-1, +\infty)$. This formulation introduces three parameters: $p_1$, $p_2$, and $\epsilon$, which complicate both numerical analysis and exact theoretical treatment. Although an exact analytical characterization appears challenging, identifying necessary and sufficient conditions for strict sub-Gaussianity in this parameterized family remains an open question and a promising direction for future research.ù
 
 
 % \textcolor{red}{Olivier: There are cases where $F$ does not admit a positive zero. For example $(p_1,p_2)=(0.01, 0.5)$ which belongs to the second regime. }
@@ -434,7 +546,10 @@ From \autoref{LemmaNumber2}, $F(\lambda)=0$ has no solution on $\mathbb{R}_+^*$ 
 % \textcolor{red}{To be done: General theorem tells us that the optimal variance proxy selects the biggest value of $\sigma^2$. However, apart from the symmetric case which is dealt with in the previous remark, it is not even clear that there is a positive zero of $F$ in the second regime. I have plots where the zero exists and some where it does not. Logically, there should also be cases for which the zero exists but the corresponding variance is not the biggest one. Therefore, at this stage it would be good to have a 3d plot of the optimal variance relatively to $(p_1,p_2)$. When $p_1+p_2=1/3$, we have $\sigma_c^2=\frac{2(p_2-p_1)}{\ln \frac{p_2}{p_1}}$ and the positive zero is $\lambda_c=\ln(p_2/p_1)>0$. This is a case where both critical variance are equal so this also possible even in the non-symmetric case.}
 
 %\newpage
+
 \section{Application to uniform discrete distributions}\label{sec:uniform}
+\textcolor{red}{Olivier: In what sense can this be seen as an application since ti does not seem that we use one of the main result in this section?}\\
+\textcolor{blue}{Soufiane: I agree that this section does not directly use any of the main results. I included it because we utilize the function g used in characterization. We can discuss choosing a more appropriate title for this section.}\\
 Let \( X \) be a random variable with finite support defined as \(X(\Omega)=\{x_1, x_2, \ldots, x_N\}\), where $N>1$, and each point is equiprobable: 
 \[
   \mathbb{P}(X = x_k) = \frac{1}{N}, \quad \text{for all } k \in \{1,2,\dots,N\}.
@@ -470,7 +585,6 @@ u(\lambda) := \ln\left(\frac{1}{N}\sum_{k=1}^{N} e^{\lambda k}\right).
 By general theory, it follows that the variance $\operatorname{Var}[Y]=\frac{N^2-1}{12}$ provides a lower bound for the optimal variance proxy. Hence, in our analysis we consider $\sigma\geq \sqrt{\frac{N^2-1}{12}}$.\\
 
 To characterize the optimal variance proxy, it is essential to study the properties of the function $g_{\sigma, N}$. Observe that $g_{\sigma, N}$ is a smooth function of $(\sigma, \lambda, N)$. Its first three derivatives with respect to $\lambda$ are explicitly computed as:
- 
 \begin{align*}
 g'_{\sigma,N}(\lambda)   &= \lambda \sigma^2 - u'(\lambda) + \mu \\
 g^{(2)}_{\sigma,N}(\lambda) &= \sigma^2 - u^{(2)}(\lambda)\\
@@ -479,7 +593,7 @@ g^{(3)}_{\sigma,N}(\lambda) &= - u^{(3)}(\lambda).
 To analyze the properties of the function \( u(\lambda) \), and consequently those of \( g_{\sigma,N}(\lambda) \), we introduce an auxiliary family of probability distributions. This approach allows us to leverage probabilistic tools to study the behavior of \( u(\lambda) \) and its derivatives.\\
 Let \( \mathcal{I} = \{1, \ldots, N\} \). For every real number \( \lambda \), consider the family of probability distributions \( (P_\lambda)_{\lambda \in \mathbb{R}} \) on \( \mathcal{I} \) defined by
 \beq
-P_\lambda(k) = \frac{e^{\lambda k}}{\sum_{j=1}^N e^{\lambda j}}, \quad k \in \mathcal{I}.
+P_\lambda(k) = \frac{e^{\lambda k}}{\underset{j=1}{\overset{N}{\sum}}e^{\lambda j}}, \quad k \in \mathcal{I}.
 \eeq
 We denote by \( \mathbb{E}_\lambda[\cdot] \), \( \operatorname{Var}_\lambda[\cdot] \), and \( \operatorname{\kappa}_{3,\lambda[}\cdot] \) the expectation, variance and  third central moment with respect to \( P_\lambda \), respectively. Note that when \( \lambda = 0 \), this distribution reduces to the uniform distribution over \( \mathcal{I} \).
 This family of distributions satisfies several fundamental identities, including symmetry properties and a moment derivative formula.
@@ -521,7 +635,7 @@ Consequently,
 \eeq
 \end{lemma}
 \begin{proof}
-The explicit expression  of \( u^{(3)}\) follow by direct differentiation of \( u(\lambda) = \ln S(\lambda) \), where $ S(\lambda) = \frac{1}{N}\sum_{k=1}^N e^{\lambda k}$ and using the closed-form expression for the geometric sum.\\
+The explicit expression  of \( u^{(3)}\) follow by direct differentiation of \( u(\lambda) = \ln S(\lambda) \), where $ S(\lambda) = \frac{1}{N}\underset{k=1}{\overset{N}{\sum}}e^{\lambda k}$ and using the closed-form expression for the geometric sum.\\
 Consider the auxiliary function
 \[
 f(t) = \frac{t(t + 1)}{(1 - t)^3}, \quad \text{for } t = e^{\lambda} > 1.
@@ -570,35 +684,99 @@ Hence, for any \( \sigma^2 \geq \operatorname{Var}[Z] \), we have \( g_{\sigma,N
 g_{\sigma,N}(\lambda,\sigma^2) = 0, \quad \frac{\partial}{\partial \lambda} g_{\sigma,N}(\lambda,\sigma^2) = 0
 \]
 admits a unique solution at \( \lambda = 0 \), which is the global minimum of \( g_{\sigma,N}^{(2)} \). Moreover, since the third derivative \( g_{\sigma, N}^{(3)}(\lambda) \) is positive on \( \mathbb{R}_+ \) and negative on \( \mathbb{R}_- \), the function \( g_{\sigma, N}^{(2)}(\lambda) \) is strictly convex and minimized at \( \lambda = 0 \). This confirms that
-\[
+\beq 
 \sigma^2_{\mathrm{opt}}[Y] = \operatorname{Var}[Y] = \frac{N^2 - 1}{12}
+\eeq
+is the optimal variance proxy, and implies that \( Y \) is strictly sub-Gaussian. Thus \(X\) is strictly sub-Gaussian and its optimal proxy variance has the form \beq \sigma^2_{\mathrm{opt}}[X] = a^2 \frac{N^2 - 1}{12} \eeq 
+
+\section{Software Implementation}
+To support reproducibility and facilitate the use of state-of-the-art and our theoretical results, 
+we developed a Python package to compute the optimal sub-Gaussian variance proxy for a wide range of probability distributions. 
+The package handles both discrete and continuous distributions, including truncated Gaussian and Exponential laws. 
+It returns whether a given distribution is strictly sub-Gaussian as well as the associated optimal variance proxy. 
+
+The implementation follows a unified principle. 
+Whenever a closed-form expression is available, it is returned directly (e.g., Bernoulli, Binomial, Uniform, Discrete Uniform, and certain symmetric laws such as Beta, Kumaraswamy, Triangular, or  three-mass distributions (under specific conditions). 
+In contrast, when no closed form exists, the computations relies on the general characterization via
+\[
+h(\lambda) \;=\; \frac{2}{\lambda^{2}} \, \ln \mathbb{E}\!\left[e^{\lambda(X-\mu)}\right],
+\qquad 
+\sigma^2_{\text{opt}} \;=\; \sup_{\lambda \in \mathbb{R}} h(\lambda),
 \]
-is the optimal variance proxy, and implies that \( Y \) is strictly sub-Gaussian.
-% \newpage
-% \section{Software implementation}\label{sec:software}
+where $\mu$ is the mean of the distribution. 
+The maximizer of $h(\lambda)$ is located numerically using adaptive grid search combined with robust root-finding algorithms (Brent or bisection). 
+
+For some families, such as the Triangular distribution, the alternative $\Delta$-function formulation recommended in \cite{arbel2020strict} is employed: 
+\[
+\Delta(\sigma^{2}, \lambda) \;=\; \exp\!\left(\tfrac{1}{2}\lambda^{2}\sigma^{2}\right) \;-\; \mathbb{E}\!\left[e^{\lambda(X-\mu)}\right],
+\]
+where the optimal variance proxy is the smallest $\sigma^{2}$ such that $\Delta(\sigma^{2}, \lambda) \geq 0$ for all $\lambda$, with equality and stationarity at some $\lambda_0 \in \mathbb{R}$:
+\[
+\Delta(\sigma_{\mathrm{opt}}^{2}, \lambda_0) = 0, 
+\qquad 
+\frac{\partial}{\partial \lambda}\Delta(\sigma_{\mathrm{opt}}^{2}, \lambda_0) = 0.
+\]
+
+For stability near singular regimes, local Taylor expansions of the cumulant generating function are also employed to represent $\Delta$.\\
+
+In addition, the package also implements a recent characterization of the optimal variance proxy based on the function 
+\[
+g_Y(\lambda;\sigma^2)=\tfrac{1}{2}\lambda^2\sigma^2 - M_Y(\lambda),
+\]
+where $M_Y$ is the cumulant generating function of $Y-\mu$. 
+This approach reduces the computation of $\sigma^2_{\mathrm{opt}}$ to solving the coupled system 
+\[
+g_Y(\lambda;\sigma^2)=0, \qquad g'_Y(\lambda;\sigma^2)=0,
+\]
+leading to the critical sets $\mathcal{L}_c$ and $\mathcal{S}_c$ introduced in  section~\ref{sec:charac}. 
+This formulation is particularly useful for discrete distributions with a few number of points, such as the three-mass distribution, where it provides a tractable and efficient criterion for identifying candidate values of the variance proxy.\\
+To this end, the software integrates efficient bracketing, adaptive grid search, and Brent-type root-finding to implement characterizations above.
+This hybrid approach allows the package to combine exact formulas with adaptive numerical optimization, thereby covering both tractable and analytically intractable distributions within a consistent computational framework. 
+In addition, the package offers utilities for visualization (plots of $h(\lambda)$, comparisons of $\mathrm{Var}(X)$ vs.\ $\sigma^2_{\text{opt}}$) and supports batch analysis across multiple parameter settings. 
+Overall, the software provides a comprehensive and user-friendly environment for exploring sub-Gaussian properties, and serves as a computational companion for researchers applying concentration bounds in Bayesian inference, variational methods, and beyond.
+%\section{Future research directions}
+\section*{Acknowledgment}
+We would like to thank ...
+\newpage
+%\section{Software Implementation}\label{sec:software}
+%To support reproducibility and facilitate the use of state-of-the-art and our theoretical  results, 
+%we developed a python package to compute the optimal sub-Gaussian variance proxy for a wide range of probability distributions. 
+%The package handles both discrete and continuous distributions, including some truncated distributions as Gaussian and exponential. The package returns whether a given distribution is strictly sub-Gaussian as well as the associated optimal variance proxy. 
+%The implementation follows a unified principle: whenever a closed-form expression of the variance proxy is available, it is returned directly (e.g., Bernoulli, Binomial, Uniform, Discrete Uniform, and certain symmetric laws such as Beta, Kumaraswamy, Triangular, or symmetric three-mass distributions under specific conditions). 
+
+%In contrast, when no closed form exists, in the general case, the computation relies on the characterization by the function
+%\[
+%h(\lambda) \;=\; \frac{2}{\lambda^{2}} \, \ln \mathbb{E}\!\left[e^{\lambda(X-\mu)}\right],
+%\]
+%where $\mu$ is the mean of the distribution. 
+%The optimal variance proxy is then given by
+%\[
+%\sigma^2_{\text{opt}} \;=\; \sup_{\lambda \in \mathbb{R}} h(\lambda),
+%\]
+%and is obtained numerically by locating the maximizer of $h(\lambda)$ through adaptive grid search and Brent or bisection root-finding methods. 
+%In specific situations (eg Triangular distribution) another characterization using  $\Delta$-function  as recommended in \cite{arbel2020strict}. The $\Delta$-function is defined by:
+%\[
+%\Delta(\sigma^{2}, \lambda) \;=\; \exp\!\left(\tfrac{1}{2}\lambda^{2}\sigma^{2}\right) \;-\; \mathbb{E}\!\left[e^{\lambda(X-\mu)}\right],
+%\]
+%here $\lambda \in \mathbb{R}$ and $\mu$ is the mean of the distribution. 
+%The optimal variance proxy is then identified as the smallest $\sigma^{2}$ such that $\Delta(\sigma^{2}, \lambda) \geq 0$ for all $\lambda$, and there exist $\lambda_0 \in \mathbb{R}$ such that: 
+%\[
+%\frac{\partial}{\partial \lambda}\Delta(\sigma_{\mathrm{opt}}^{2}, \lambda_0) = 0 \quad \text{and} \quad \Delta(\sigma_{\mathrm{opt}}^{2}, \lambda_0) = 0
+%\]
+%To this end, the software integrates efficient bracketing, adaptive grid search, and Brent-type root-finding to solve the system of equation above.
+%to test feasibility of a candidate variance. 
+%For stability near singular regimes, local Taylor expansions of the cumulant generating function are employed. 
+%This hybrid approach allows the software to combine exact formulas when available with reliable adaptive methods otherwise, thereby covering both tractable and analytically intractable distributions within a consistent computational framework. 
+%In addition, the package offers utilities for visualization (plots of $h(\lambda)$, comparisons of $\mathrm{Var}(X)$ vs.\ $\sigma^2_{\text{opt}}$) and supports batch analysis across multiple parameter settings. 
+%Overall, this software provides a comprehensive and user-friendly environment for exploring sub-Gaussian properties, and serves as a computational companion for researchers applying concentration bounds in Bayesian inference, variational methods, and beyond.
 
 
-% \section{Discrete random variables}
-% In this section, we study the optimal variance proxy for finite discrete K-ary random variables with bounded support $K \geq 3$. Their sub-Gaussianity are  ensured by classical Hoeffding's lemma:\\
-% if \(X\)  is a random variable supported on $[a,b]$ with mean $\mu = \mathbb{E}(X)$, then for all $\lambda \in \mathbb{R}$
-% \begin{equation}
-%     \mathbb{E}\left[\exp({\lambda (X - \mu))}\right] \leq \exp\left(\frac{\lambda^2 (b-a)^2}{8}\right)
-%         \label{eq:hoeffdings_lemma}
-% \end{equation}
-% This result guarantees that bounded random variables exhibit sub-Gaussian behavior, which is crucial for variance proxy analysis.
-% \subsection{Sub-Gaussianity of binary variables}
-% \cite{Kearns1998LargeDM} Lemma 1 showed that any binary random variable with mean $\mu$  is $\frac{1}{2g(\mu)}$-sub-gaussian :
-% \begin{equation}
-%     \mathbb{E}\left[e^{({\lambda (X - \mu))}}\right] \leq \exp\left(\frac{\lambda^2}{4g(\mu)}\right) \text{ for all } \lambda \in \mathbb{R}.
-%     \label{eq:Kearns_lemma}
-% \end{equation}
-% where 
-% \begin{equation}
-%     g(\mu) = \frac{1}{1-2\mu}{\ln\frac{1-\mu}{\mu}}
-% \end{equation}
-% The sub-Gaussian property (\ref{eq:Kearns_lemma}) refines Hoeffding's inequality (\ref{eq:hoeffdings_lemma}) by introducing the mean-dependent term $g(\mu)$. For the Bernoulli distribution with mean $\mu \in (0,1)$,  \cite{buldygin2013sub} Theorem 2.1 established that $\frac{1}{2g(\mu)} $ constitutes the optimal variance proxy. This result was verified by \cite{marchal2017sub} Theorem 2.\\
-% \textbf{Remark 1}. \textit{The variance proxy $\frac{1}{2g(\mu)}$ is distribution sensitive, for $\mu \rightarrow 0 \text{ or 1, we have }\\ g(\mu) \rightarrow +\infty \text{ reflecting lighter tails.}$}\\
-% Henceforth, we denote $\underline{\textbf{a}} = (a_1, a_2, ..., a_K)$ and $\underline{\textbf{p}} = (p_1, p_2, ..., p_K)$
+
+
+
+
+\newpage
+
 
 % \newpage
 % \section*{Technical Results}
