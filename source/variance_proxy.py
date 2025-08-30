@@ -14,14 +14,14 @@ class AdaptiveSearchWarning(UserWarning):
 
 def subgaussian_proxy_variance_bernoulli(p: float) -> float:
     """
-    Compute the optimal sub-Gaussian proxy variance for a Bernoulli(p) distribution.
+    Compute the optimal sub-Gaussian  variance proxy for a Bernoulli(p) distribution.
     
     Parameters:
     ----------
     - p: float, probability of success (0 < p < 1)
 
     Returns:
-    - float: The optimal proxy variance sigma_opt_squared
+    - float: The optimal variance proxy sigma_opt_squared
     """
     if not 0 < p < 1:
         raise ValueError("p must be between 0 and 1 (exclusive).")
@@ -37,16 +37,16 @@ def subgaussian_proxy_variance_bernoulli(p: float) -> float:
 
 def subgaussian_proxy_variance_binomial(n: int, p: float) -> float:
     """
-    Compute the optimal sub-Gaussian proxy variance for a Binomial(n,p) distribution.
+    Compute the optimal sub-Gaussian variance proxy  for a Binomial(n,p) distribution.
     For S = sum_{i=1}^n X_i with X_i i.i.d. Bernoulli(p),
-    the optimal proxy variances add: sigma_opt^2(S) = n * sigma_opt^2(Bernoulli(p)).
+    the optimal variances proxy  add: sigma_opt^2(S) = n * sigma_opt^2(Bernoulli(p)).
     
     Parameters:
     ----------
     - p: float, probability of success (0 < p < 1)
 
     Returns:
-    - float: optimal proxy variance sigma_opt_squared
+    - float: optimal variance proxy sigma_opt_squared
     """
 
     if n < 0:
@@ -64,7 +64,7 @@ def subgaussian_proxy_variance_binomial(n: int, p: float) -> float:
 def subgaussian_proxy_variance_uniform(a: float, b: float) -> float:
     
     """
-    Compute the optimal sub-Gaussian proxy variance for Uniform(a, b).
+    Compute the optimal sub-Gaussian variance proxy  for Uniform(a, b).
 
     X ~ Uniform(a, b) has optimal proxy:
         sigma_opt² = Var(X) = (b - a)² / 12.
@@ -75,7 +75,7 @@ def subgaussian_proxy_variance_uniform(a: float, b: float) -> float:
         b: Upper bound of the interval (must satisfy b > a).
 
     Returns:
-        float: The optimal sub-Gaussian proxy variance (equals the variance).
+        float: The optimal sub-Gaussian variance proxy  (equals the variance).
     """
 
     if a >= b:
@@ -92,7 +92,7 @@ def subgaussian_proxy_variance_sum_independant_uniform(segments: tuple) -> float
               but not necessarily identically distributed
               
     Returns: 
-    total mean, variance, and sub-Gaussian proxy variance of the sum
+    total mean, variance, and sub-Gaussian variance proxy of the sum
     """
     if not segments or not all(isinstance(seg, tuple) and len(seg) == 2 for seg in segments):
         raise ValueError("segments must be a non-empty list of tuples (a, b).")
@@ -110,9 +110,9 @@ def subgaussian_proxy_variance_sum_independant_uniform(segments: tuple) -> float
 
 def subgaussian_discrete_uniforme_variance_proxy(a: float, n: int) -> float:
     """
-    Proxy variance for a discrete uniform with equally spaced support:
+    Variance proxy  for a discrete uniform with equally spaced support:
 
-        X ∈ {h + a*k : k = 0, 1, ..., N-1}
+        X ∈ {h + a*k : k = 0, 1, ..., n-1}
 
     The variance is independent of the offset h and equals:
 
@@ -122,12 +122,13 @@ def subgaussian_discrete_uniforme_variance_proxy(a: float, n: int) -> float:
     ----------
     a : float
         Spacing between support points.
-    N : int
+    n : int
         Number of support points (must be >= 2).
     
     Returns:
-        - float: optimal sub-Gaussian proxy variance """
-    
+        - float: optimal sub-Gaussian variance proxy
+
+    """
     if n < 2:
         raise ValueError("n must be at least 2.")
     
@@ -136,7 +137,7 @@ def subgaussian_discrete_uniforme_variance_proxy(a: float, n: int) -> float:
 
 def subgaussian_proxy_variance_truncated_random(a: float, b: float, mu: float, sigma_opt_squared: float) -> float:
     """
-    Compute the optimal sub-Gaussian proxy variance for a truncated normal variable.
+    Compute the optimal sub-Gaussian variance proxy for a truncated normal variable.
 
     Parameters:
     - a, b: float, bounds of truncation interval (a < b)
@@ -144,7 +145,7 @@ def subgaussian_proxy_variance_truncated_random(a: float, b: float, mu: float, s
     - sigma2: float, variance of the original normal variable (σ² > 0)
 
     Returns:
-    - float: optimal sub-Gaussian proxy variance
+    - float: optimal sub-Gaussian variance proxy
     """
     if  a < b:
         raise ValueError("Invalid interval: require a < b")
@@ -391,8 +392,9 @@ class SubGaussianTriangularProxy:
 class SubGaussian3MassSymetricProxy:
 
     """
-    Class for computing the optimal sub-Gaussian proxy variance for 
-    3-mass discrete distributions under sub-Gaussianity constraints.
+    Class for computing the optimal sub-Gaussian variance proxy for 
+    symmetric 3-mass discrete distributions on {-a, 0, +a}
+    with probabilities: p at -a, 1-2p at 0, p at +a.
 
     Attributes:
     ----------
@@ -400,8 +402,12 @@ class SubGaussian3MassSymetricProxy:
         The probability parameter (must satisfy 0 < p < 1).
     a : float
         The scaling parameter for the support points.
+
+    Returns:
+    -------
     sigma_opt_squared : float
-        The computed optimal proxy variance (initialized after computation).
+        The computed optimal variance proxy (initialized after computation).
+        
     """
 
     def __init__(self, p: float, a: float = 1):
@@ -411,30 +417,43 @@ class SubGaussian3MassSymetricProxy:
         self.a = a
         self.sigma_opt_squared = None  
         self.lambda_0 = np.arccosh(
-            (1 - 4 * self.p  - 4 * self.p  ** 2) / (2 * self.p  * (1 - 2 * self.p ))
-            )
+            (1 - 4 * self.p  - 4 * self.p  ** 2) / (2 * self.p  * (1 - 2 * self.p )))  
         self.lower_bound = 2 * self.p 
-        self.upper_bound = (1 - 2 * self.p ) ** 2  / (4 * (1 - 4 * self.p ))
+        self.upper_bound = (1 - 2 * self.p ) ** 2  / (4 * (1 - 4 * self.p )) 
 
-    def _eq(self, lambda_c):
-        denom = 2 * self.p * np.cosh(lambda_c) + 1 - 2 * self.p
-        lhs = self.p * lambda_c * np.sinh(lambda_c) / denom
-        rhs = np.log(denom)
-        return lhs - rhs
-    
+    def _equation(self, lambda_c):
+        term = 2 * self.p * np.cosh(lambda_c) + 1 - 2 * self.p
+        equation = self.p * lambda_c * np.sinh(lambda_c) - term * np.log(term)
+        return equation
+
+    def plot_objective_function(self):
+        
+        lambdas = np.linspace(self.lambda_0 - 1, 50, 5000)
+        equations = [self._equation(lam) for lam in lambdas]
+
+        plt.figure(figsize=(8, 5))
+        plt.plot(lambdas, equations, label=f"p={self.p}, a={self.a}")
+        plt.axhline(0, color='gray', lw=0.5, ls='--')
+        plt.title("Objective Function")
+        plt.xlabel("λ")
+        plt.ylabel("Objective Value")
+        plt.legend()
+        plt.grid()
+        plt.show()
+
     def subgaussian_variance_proxy(self, tol=1e-7):
         if self.p >= 1./6:
             self.sigma_opt_squared = self.lower_bound
     
         else:
             lambdas = np.linspace(self.lambda_0 + tol, 50, 5000)
-            signs = np.sign([self._eq(lam) for lam in lambdas])
+            signs = np.sign([self._equation(lam) for lam in lambdas])
 
             for i in range(len(signs) - 1):
                 if signs[i] != signs[i + 1]:
                     a, b = lambdas[i], lambdas[i + 1]
                     result = root_scalar(
-                        self._eq, bracket=[a, b], method='bisect', xtol=tol
+                        self._equation, bracket=[a, b], method='bisect', xtol=tol
                         )
                     if result.converged:
                         lambda_c_sol = result.root
@@ -454,10 +473,24 @@ class SubGaussian3MassSymetricProxy:
 
 class SubGaussian3MassAssymetricProxy:
     """
-    Optimal sub-Gaussian proxy variance for a 3-mass distribution on {-a, 0, +a}
+    Class for computing the optimal sub-Gaussian variance proxy for assymetric 3-mass distribution on {-a, 0, +a}
     with probabilities: p1 at -a, p3=1-p1-p2 at 0, p2 at +a.
     
-    returns a^2 * sigma_opt_squared
+    Attributes:
+    ----------
+    p1 : float
+        The probability parameter corresponding to -a (must satisfy 0 < p1 < 1).
+    p2 : float
+        The probability parameter corresponding to +a (must satisfy 0 < p2 < 1).
+        
+    a : float
+        The scaling parameter for the support points.
+    
+    Returns:
+    -------
+    sigma_opt_squared : float
+        The computed optimal variance proxy (initialized after computation).
+   
     """
 
 
@@ -604,7 +637,7 @@ class SubGaussian3MassAssymetricProxy:
                 self.sigma_opt_squared = r / lam
             else:
                 self.sigma_opt_squared = (r - (self.p2 - self.p1)) / lam
-            return self.a ** 2 * self.sigma_opt_squared
+            return self.a**2 * self.sigma_opt_squared
 
 
         lam_upper = self._lambda_minus_safe() or 700.0
@@ -655,7 +688,7 @@ class SubGaussianBetaProxy:
         
         return -np.inf  # Safe fallback for any error
 
-    def plot_h(self, lam_min=-100, lam_max=100, n_points=50000):
+    def plot_objective_function(self, lam_min=-100, lam_max=100, n_points=50000):
             """
             Plot h(λ) = 2/λ² * log E[exp(λ(X-μ))] and its maximum.
             """
@@ -667,14 +700,14 @@ class SubGaussianBetaProxy:
 
             plt.figure(figsize=(7, 4))
             plt.plot(lam_vals, h_vals, label="h(λ)")
-            plt.axhline(self.var, color="gray", ls="--", label="Var(X)")
+            plt.axvline(lam_star, color="gray", ls="--", label=f"λ*={lam_star:.2f}")
             if np.isfinite(lam_star):
                 plt.scatter([lam_star], [opt_val], color="red", zorder=5,
-                            label=f"max h(λ)={opt_val:.4f} at λ*={lam_star:.3f}")
+                            label=f"$\max_{{\lambda}} h={opt_val:.4f} \ at \ \lambda^*={lam_star:.2f}$")
             plt.xlabel("λ")
             plt.ylabel("h(λ)")
             plt.title(f"h(λ) for Beta(α={self.alpha}, β={self.beta})")
-            plt.legend()
+            plt.legend(loc="lower left")
             plt.grid(True)
             plt.show()    
             
@@ -700,7 +733,7 @@ class SubGaussianBetaProxy:
         sigma_opt_squared = self.var
         lambda_star = 0.0
 
-        # 1) Search with Brent in brackets
+        # Search with Brent in brackets
         for scale in self.bracket_scales:
             try:
                 bracket = (-scale, 0, scale)
@@ -717,7 +750,7 @@ class SubGaussianBetaProxy:
             except Exception:
                 continue
 
-        # Fallback 
+        # Fallback search with Bounded Optimization
         for bound in self.bounds_list:
             try:
                 result = minimize_scalar(
