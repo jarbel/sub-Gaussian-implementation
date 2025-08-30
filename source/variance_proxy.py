@@ -1,8 +1,9 @@
-import numpy as np
-from scipy.stats import norm
-import warnings
-from scipy.special import hyp1f1
 from scipy.optimize import root_scalar, minimize_scalar
+from scipy.special import hyp1f1
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+import numpy as np
+import warnings
 
 
 class AdaptiveSearchWarning(UserWarning):
@@ -37,10 +38,8 @@ def subgaussian_proxy_variance_bernoulli(p: float) -> float:
 def subgaussian_proxy_variance_binomial(n: int, p: float) -> float:
     """
     Compute the optimal sub-Gaussian proxy variance for a Binomial(n,p) distribution.
-    
-    If S = sum_{i=1}^n X_i with X_i i.i.d. Bernoulli(p),
-    then the optimal proxy variances add for independent sums, so:
-        sigma_opt^2(S) = n * sigma_opt^2(Bernoulli(p)).
+    For S = sum_{i=1}^n X_i with X_i i.i.d. Bernoulli(p),
+    the optimal proxy variances add: sigma_opt^2(S) = n * sigma_opt^2(Bernoulli(p)).
     
     Parameters:
     ----------
@@ -68,7 +67,7 @@ def subgaussian_proxy_variance_uniform(a: float, b: float) -> float:
     Compute the optimal sub-Gaussian proxy variance for Uniform(a, b).
 
     X ~ Uniform(a, b) has optimal proxy:
-        sigma_opt^2 = Var(X) = (b - a)^2 / 12.
+        sigma_opt² = Var(X) = (b - a)² / 12.
 
     Parameters:
     ----------
@@ -95,14 +94,17 @@ def subgaussian_proxy_variance_sum_independant_uniform(segments: tuple) -> float
     Returns: 
     total mean, variance, and sub-Gaussian proxy variance of the sum
     """
+    if not segments or not all(isinstance(seg, tuple) and len(seg) == 2 for seg in segments):
+        raise ValueError("segments must be a non-empty list of tuples (a, b).")
+    
     total_sigma2_opt = 0
 
-    for a, b in segments:
-        if a < b :
-            raise ValueError(f"Invalid interval: a={a}, b={b}") 
+    for i, (a, b) in enumerate(segments):
+        if a >= b :
+            raise ValueError(f"Invalid interval at position {i}: a={a}, b={b}") 
     
-        sigma_opt_squared = subgaussian_proxy_variance_uniform(a, b)
-        total_sigma2_opt += sigma_opt_squared
+        sigma_opt_squared_i = subgaussian_proxy_variance_uniform(a, b)
+        total_sigma2_opt += sigma_opt_squared_i
     
     return total_sigma2_opt
 
@@ -635,7 +637,7 @@ class SubGaussianBetaProxy:
         self.mu = self.alpha / (self.alpha + self.beta)
 
         self.bounds_list = [2, 5, 10, 20, 50, 100]  
-        self.bracket_scales = [1, 2, 5, 10]  
+        self.bracket_scales = [1, 2, 5, 10, 20, 40]  
 
     def h_beta(self, lam):
         """Compute h(λ) with safe fallback."""
@@ -648,41 +650,74 @@ class SubGaussianBetaProxy:
                 result = 2.0 / (lam * lam) * np.log(val)
                 if np.isfinite(result):
                     return result
-        except:
+        except Exception:
             pass
         
         return -np.inf  # Safe fallback for any error
-        
-    def subgaussian_variance_proxy(self):
 
+    def plot_h(self, lam_min=-100, lam_max=100, n_points=50000):
+            """
+            Plot h(λ) = 2/λ² * log E[exp(λ(X-μ))] and its maximum.
+            """
+            
+            lam_vals = np.linspace(lam_min, lam_max, n_points)
+            h_vals = [self.h_beta(l) for l in lam_vals]
+
+            opt_val, lam_star = self.subgaussian_variance_proxy()
+
+            plt.figure(figsize=(7, 4))
+            plt.plot(lam_vals, h_vals, label="h(λ)")
+            plt.axhline(self.var, color="gray", ls="--", label="Var(X)")
+            if np.isfinite(lam_star):
+                plt.scatter([lam_star], [opt_val], color="red", zorder=5,
+                            label=f"max h(λ)={opt_val:.4f} at λ*={lam_star:.3f}")
+            plt.xlabel("λ")
+            plt.ylabel("h(λ)")
+            plt.title(f"h(λ) for Beta(α={self.alpha}, β={self.beta})")
+            plt.legend()
+            plt.grid(True)
+            plt.show()    
+            
+    def subgaussian_variance_proxy(self):
         """
-            Adaptive bound search for σ^2_opt = max_λ h(λ) where
-            h(λ) = 2/λ² * log( E[exp(λ(X-μ)}] ) with X ~ Beta(alpha, beta).
+        Adaptive bound search for σ²_opt = max_λ h(λ) where
+        h(λ) = 2/λ² * log( E[exp(λ(X-μ))] ) with X ~ Beta(alpha, beta).
+
+        Returns
+        -------
+        sigma_opt_squared : float
+            Optimale value of  h(λ) (variance proxy).
+        lambda_star : float
+            λ maximising h(λ).
         """
-     
+        # Symmetric case  : optimum at λ = 0
         if np.isclose(self.alpha, self.beta):
-            return self.var
-        
-        best_result = self.var    
-       
+            lambda_star = 0.0
+            sigma_opt_squared = self.var
+            return sigma_opt_squared, lambda_star
+
+        # Default initialization
+        sigma_opt_squared = self.var
+        lambda_star = 0.0
+
+        # 1) Search with Brent in brackets
         for scale in self.bracket_scales:
             try:
                 bracket = (-scale, 0, scale)
-                
                 result = minimize_scalar(
                     lambda lam: -self.h_beta(lam),
                     bracket=bracket,
                     method='brent'
                 )
-                
                 if result.success and np.isfinite(result.fun):
                     optimal_value = -result.fun
+                    lambda_star = float(result.x)
                     if optimal_value >= self.var * 0.999:
-                        return optimal_value  
-            except:
-                continue  # Try next bracket scale
-        
-        # Fallback to bounded method with expanding bounds
+                        return optimal_value, lambda_star
+            except Exception:
+                continue
+
+        # Fallback 
         for bound in self.bounds_list:
             try:
                 result = minimize_scalar(
@@ -690,14 +725,14 @@ class SubGaussianBetaProxy:
                     bounds=(-bound, bound),
                     method='bounded'
                 )
-                
                 if result.success and np.isfinite(result.fun):
                     optimal_value = -result.fun
-                    if optimal_value >= self.var * 0.999 and optimal_value > best_result:
-                        best_result = optimal_value
+                    if optimal_value >= self.var * 0.999 and optimal_value > sigma_opt_squared:
+                        sigma_opt_squared = optimal_value
+                        lambda_star = float(result.x)
                         if abs(result.x) < 0.9 * bound:
                             break
-            except:
+            except Exception:
                 continue  
-        
-        return best_result
+
+        return sigma_opt_squared, lambda_star
