@@ -10,9 +10,8 @@ def test_subgaussian_proxy_variance_bernoulli():
 
 
 
-
 check_assymetric_symmetric = False
-replicate_paper_figs = True
+replicate_paper_figs = False
 test_3mass_sym_and_assym = True
 
 if check_assymetric_symmetric:
@@ -25,7 +24,8 @@ if check_assymetric_symmetric:
         proxy_variances_ass.append(objAssym.subgaussian_variance_proxy())
         
         objSym = SubGaussian3MassSymetricProxy(p)
-        proxy_variances_s.append(objSym.subgaussian_variance_proxy())
+        sigma_opt_squared, _ = objSym.subgaussian_variance_proxy()
+        proxy_variances_s.append(sigma_opt_squared)
 
     proxy_variances_ass = np.array(proxy_variances_ass)
     proxy_variances_s = np.array(proxy_variances_s)
@@ -132,7 +132,7 @@ if replicate_paper_figs:
 if test_3mass_sym_and_assym:
 
     #################################################### Compare Symmetric and Asymmetric implementations ####################################################
-    p_values = np.linspace(0.0001, 1/6 - 0.0001, 300)  # p < 1/6
+    p_values = np.linspace(0.0001, 1/6 - 0.0001, 500)  # p < 1/6
     proxy_variances_ass = []
     proxy_variances_s = []
     for p in p_values:
@@ -141,11 +141,11 @@ if test_3mass_sym_and_assym:
         proxy_variances_ass.append(sigma2_opt_ass)
         
         objS = SubGaussian3MassSymetricProxy(p)
-        sigma2_opt_s = objS.subgaussian_variance_proxy()
-        proxy_variances_s.append(sigma2_opt_s)
+        sigma_opt_squared, _ = objS.subgaussian_variance_proxy()
+        proxy_variances_s.append(sigma_opt_squared)
         
     plt.figure(figsize=(8, 6))
-    plt.plot(p_values, proxy_variances_s, label="symmetric", linestyle='dashed')
+    plt.plot(p_values, proxy_variances_s, label="symmetric", linestyle='dashed', linewidth=2)
     plt.plot(p_values, proxy_variances_ass, label="assymmetric")
     plt.title('Equivalence Check: Optimal Proxy Variance — Symmetric vs. Asymmetric Implementations')
     plt.xlabel('Probability (p<1/6)')
@@ -154,7 +154,9 @@ if test_3mass_sym_and_assym:
     plt.grid(True)
     plt.show()
 
-    #################################################### Reproduction of paper plot ####################################################
+    #################################################### Reproduction of paper plot ####################################################*
+
+        
     tol = 1e-7
     sigma_opt_squared_values = []
     sigma_up_values = []
@@ -162,16 +164,15 @@ if test_3mass_sym_and_assym:
 
     for p in p_values:
         obj = SubGaussian3MassSymetricProxy(p)
-        sigma_opt_squared = obj.subgaussian_variance_proxy()
+        sigma_opt_squared, _ = obj.subgaussian_variance_proxy()
         sigma_opt_squared_values.append(sigma_opt_squared)
         sigma_up_values.append(obj.upper_bound)
         sigma_2p_values.append(2 * p)
 
     plt.figure(figsize=(8, 6))
     plt.plot(p_values, sigma_2p_values, color='blue', label=r'$2p$')
-    plt.plot(p_values, sigma_up_values, color='red', label=r'$\sigma_{\mathrm{up}} \frac{(1 - 2p)^2}{4(1 - 4p)}$')
+    plt.plot(p_values, sigma_up_values, color='r', label=r'$\sigma_{\mathrm{up}}^2 = \frac{(1 - 2p)^2}{4(1 - 4p)}$')
     plt.plot(p_values, sigma_opt_squared_values, 'ko', markersize=3, label=r'$\sigma_{\mathrm{opt}}^2$')
-
     plt.xlabel(r'$p$')
     plt.ylabel(r'Variance proxy')
     plt.title('Optimal variance proxy for symmetric 3-mass discrete distribution')
@@ -181,6 +182,7 @@ if test_3mass_sym_and_assym:
 
     #################################################### Exhaustive test for assymetric implementation ####################################################
 
+    # success rate 1.0, total pairs 996004, fail 0
     s = 0
     f = 0
 

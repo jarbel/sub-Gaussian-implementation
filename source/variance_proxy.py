@@ -415,7 +415,8 @@ class SubGaussian3MassSymetricProxy:
             raise ValueError("p must be in (0,0.5].")
         self.p = p
         self.a = a
-        self.sigma_opt_squared = None  
+        self.sigma_opt_squared = None 
+        self.lambda_star = None
         self.lambda_0 = np.arccosh(
             (1 - 4 * self.p  - 4 * self.p  ** 2) / (2 * self.p  * (1 - 2 * self.p )))  
         self.lower_bound = 2 * self.p 
@@ -428,13 +429,16 @@ class SubGaussian3MassSymetricProxy:
 
     def plot_objective_function(self):
         
-        lambdas = np.linspace(self.lambda_0 - 1, 50, 5000)
+        lambdas = np.linspace(self.lambda_star - 1, self.lambda_star + 1 , 5000)
         equations = [self._equation(lam) for lam in lambdas]
 
         plt.figure(figsize=(8, 5))
-        plt.plot(lambdas, equations, label=f"p={self.p}, a={self.a}")
+        plt.plot(lambdas, equations, label=f"p={self.p}, a=1")
         plt.axhline(0, color='gray', lw=0.5, ls='--')
-        plt.title("Objective Function")
+        plt.title(
+            r"$p \, \lambda_c \sinh(\lambda_c) - "
+            r"(1 - 2p + 2p \cosh(\lambda_c)) \, \ln(1 - 2p + 2p \cosh(\lambda_c)) = 0$"
+        )
         plt.xlabel("λ")
         plt.ylabel("Objective Value")
         plt.legend()
@@ -456,19 +460,20 @@ class SubGaussian3MassSymetricProxy:
                         self._equation, bracket=[a, b], method='bisect', xtol=tol
                         )
                     if result.converged:
-                        lambda_c_sol = result.root
-                        denom = 2 * self.p * np.cosh(lambda_c_sol) + 1 - 2 * self.p
+                        self.lambda_star = result.root
+                        denom = 2 * self.p * np.cosh(self.lambda_star) + 1 - 2 * self.p
                         self.sigma_opt_squared = (
-                            2 * self.p * np.sinh(lambda_c_sol)
-                        ) / (lambda_c_sol * denom)
+                            2 * self.p * np.sinh(self.lambda_star)
+                        ) / (self.lambda_star * denom)
                     else:
                         raise RuntimeError("Root-finding did not converge.")
                     break
             else:
                 self.sigma_opt_squared  = np.nan
+                self.lambda_star = np.nan
                 warnings.warn(f"No sign change found; root cannot be located for p = {self.p}")
 
-        return self.a**2 * self.sigma_opt_squared 
+        return self.a**2 * self.sigma_opt_squared, self.lambda_star
     
 
 class SubGaussian3MassAssymetricProxy:
@@ -512,28 +517,27 @@ class SubGaussian3MassAssymetricProxy:
 
     def _logu0_and_r(self, lam: float):
         """
-        Return (log_u0, r=u1/u0) stably, without , for λ>0.
-
-        u0(λ) = p1 exp(-λ) + p2 exp(λ) + p3
-        u1(λ) = -p1 exp(-λ) + p2 exp(λ)
-        r     = u1/u0 = -w1 + w2 where w_i are stable weights in [0,1].
+        Return numerically stable (log_u0, r=u1/u0) for λ>0.
+        Where:
+            u0(λ) = p1 exp(-λ) + p2 exp(λ) + p3
+            u1(λ) = -p1 exp(-λ) + p2 exp(λ)
+            r     = u1/u0 = -w1 + w2 where w_i are stable weights in [0,1].
         """
+        
         if lam <= 0.0:
             return np.nan, np.nan
-        # log-terms
+
         t1 = np.log(self.p1) - lam
         t2 = np.log(self.p2) + lam
         t3 = np.log(self.p3)
         m = max(t1, t2, t3)
-        # transofrmation to prevent exponential overflow
         s = np.exp(t1 - m) + np.exp(t2 - m) + np.exp(t3 - m) 
         log_u0 = m + np.log(s)
-        
-        # normalized weights (sum to 1)
-        w1 = np.exp(t1 - log_u0)
-        w2 = np.exp(t2 - log_u0)
+        w1 = np.exp(t1 - log_u0)  # p1 e^{-λ} / u0
+        w2 = np.exp(t2 - log_u0)  # p2 e^{λ} / u0
         r = -w1 + w2
         return log_u0, r
+
 
     def _equation(self, lam: float) -> float:
         """
@@ -546,42 +550,52 @@ class SubGaussian3MassAssymetricProxy:
         return lam * r - 2.0 * log_u0 + lam * (self.p2 - self.p1)
 
 
-    def _default_proxy(self) -> float:
-        """Closed-form value in the easy regime (boundary at λ→0+)."""
-        if self.p1 == self.p2:
-            return self.variance
-        ratio = self.p2 / self.p1
-        if np.isclose(ratio, 1.0):
-            d = (self.p2 - self.p1) / self.p1
-            return 2.0 * (self.p2 - self.p1) / np.log1p(d)
-        return 2.0 * (self.p2 - self.p1) / np.log(ratio)
+    def _default_proxy_first_regime(self) -> float:
+        """
+        Closed-form value in the easy regime (boundary at λ → 0+).
 
-    def _lambda_minus_safe(self):
+        Returns
+        -------
+        float
+            The proxy variance in the easy regime.
         """
-        Optional closed-form point λ_- usable only when its formula is well-defined.
-        Returns None if not safely defined.
-        """
-        p1, p2, p3 = self.p1, self.p2, self.p3
-        d1 = p3 * p3 - 4.0 * p1 * p2
-        d2 = p3 * p3 - 16.0 * p1 * p2
+        try:
+            if self.p3 > 4.0 * np.sqrt(self.p1 * self.p2):
+                raise ValueError(
+                    "Not in the easy regime: requires p3 <= 4 * sqrt(p1 * p2)."
+                )
+
+            if np.isclose(self.p1, self.p2):
+                return self.variance
+
+            return 2.0 * (self.p2 - self.p1) / np.log(self.p2 / self.p1)
+
+        except (ZeroDivisionError, FloatingPointError, ValueError) as e:
+            return float("nan")
+
+    def _lambda_minus(self):
+
+        d1 = self.p3**2 - 4.0 * self.p1 * self.p2
+        d2 = self.p3**2 - 16.0 * self.p1 * self.p2
         if d1 <= 0.0 or d2 <= 0.0:
             return None
-        num = p3 * p3 - 8.0 * p1 * p2 - np.sqrt(d1 * d2)
-        den = 2.0 * p1 * p2
+        num = self.p3**2 - 8.0 * self.p1 * self.p2 - np.sqrt(d1 * d2)
+        den = 2.0 * self.p1 * self.p2
+
         if den <= 0.0 or num <= 0.0:
             return None
         return float(np.log(num / den))
 
     def _bracket_root(self,
                       lam_min: float = 1e-12,
-                      lam_max: float = 700.0,
+                      lam_max: float = 500.0,
                       growth: float = 1.8,
-                      max_iter: int = 256):
+                      max_iter: int = 200):
 
         p_eff = max(self.p1, self.p2, 1e-15)
         lam_lo = float(np.clip(np.sqrt(1e-6 / p_eff), lam_min, 1.0))  # numerically useful low end
         lam_hi = lam_lo * 2.0
-        lam_minus = self._lambda_minus_safe()
+        lam_minus = self._lambda_minus()
         if lam_minus is not None:
             lam_hi = max(lam_hi, lam_minus)
 
@@ -621,9 +635,10 @@ class SubGaussian3MassAssymetricProxy:
                 · if G(λ)<0 throughout → maximum at λ→0^+ (closed-form).
         """
      
+
         if self.p3 <= 4.0 * np.sqrt(self.p1 * self.p2):
-            self.sigma_opt_squared = self.variance if self.p1 == self.p2 else self._default_proxy()
-            return self.a ** 2 * self.sigma_opt_squared
+            self.sigma_opt_squared = self._default_proxy_first_regime()
+            return self.a**2 * self.sigma_opt_squared
 
 
         bracket = self._bracket_root()
@@ -636,27 +651,27 @@ class SubGaussian3MassAssymetricProxy:
             if np.isclose(self.p1, self.p2, atol=1e-12, rtol=0.0):
                 self.sigma_opt_squared = r / lam
             else:
-                self.sigma_opt_squared = (r - (self.p2 - self.p1)) / lam
+                self.sigma_opt_squared = max(2.0 * (self.p2 - self.p1) / np.log(self.p2 / self.p1) , (r - (self.p2 - self.p1)) / lam)
             return self.a**2 * self.sigma_opt_squared
 
 
-        lam_upper = self._lambda_minus_safe() or 700.0
-        # Evaluate G at both ends (numerically meaningful near 0)
-        lam_low_eval = max(1e-12, np.sqrt(1e-12 / max(self.p1, self.p2, 1e-15)))
-        g_low = self._equation(lam_low_eval)
-        g_up = self._equation(lam_upper)
+        # lam_upper = self._lambda_minus() or 700.0
+        # # Evaluate G at both ends (numerically meaningful near 0)
+        # lam_low_eval = max(1e-12, np.sqrt(1e-12 / max(self.p1, self.p2, 1e-15)))
+        # g_low = self._equation(lam_low_eval)
+        # g_up = self._equation(lam_upper)
 
-        if np.isfinite(g_up) and g_up > 0.0 and (not np.isfinite(g_low) or g_low >= 0.0):
-            # Monotone positive → optimum at upper boundary
-            _, r_up = self._logu0_and_r(lam_upper)
-            if np.isclose(self.p1, self.p2, atol=1e-12, rtol=0.0):
-                self.sigma_opt_squared = r_up / lam_upper
-            else:
-                self.sigma_opt_squared = (r_up - (self.p2 - self.p1)) / lam_upper
-        else:
-            self.sigma_opt_squared = self.variance if self.p1 == self.p2 else self._default_proxy()
+        # if np.isfinite(g_up) and g_up > 0.0 and (not np.isfinite(g_low) or g_low >= 0.0):
+        #     # Monotone positive → optimum at upper boundary
+        #     _, r_up = self._logu0_and_r(lam_upper)
+        #     if np.isclose(self.p1, self.p2, atol=1e-12, rtol=0.0):
+        #         self.sigma_opt_squared = r_up / lam_upper
+        #     else:
+        #         self.sigma_opt_squared = (r_up - (self.p2 - self.p1)) / lam_upper
+        # else:
+        #     self.sigma_opt_squared = self.variance if self.p1 == self.p2 else self._default_proxy_first_regime()
 
-        return self.a ** 2 * self.sigma_opt_squared
+        # return self.a ** 2 * self.sigma_opt_squared
 
 
 
