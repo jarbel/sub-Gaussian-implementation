@@ -329,8 +329,10 @@ class SubGaussianTriangularProxy:
 
 
     def subgaussian_variance_proxy(self, debug=False):
-        """ Smallest σ² in [Var[X], Hoeffding] such that min_λ Δ(σ²,λ) >= 0. 
         """
+        Smallest σ² in [Var[X], Hoeffding] such that min_λ Δ(σ²,λ) >= 0. 
+        """
+        
         if abs(self.a - self.b) < self.tolerance:
             self.sigma_opt_squared = self.variance
             return self.sigma_opt_squared
@@ -433,17 +435,23 @@ class SubGaussian3MassSymetricProxy:
         equations = [self._equation(lam) for lam in lambdas]
 
         plt.figure(figsize=(8, 5))
-        plt.plot(lambdas, equations, label=f"p={self.p}, a=1")
+        plt.plot(lambdas, equations, label=f"p = ({self.p}), a = 1")
         plt.axhline(0, color='gray', lw=0.5, ls='--')
-        plt.title(
+
+        if np.isfinite(self.lambda_star):
+            plt.axvline(self.lambda_star, color="red", ls="--", lw=0.8)
+            plt.plot(self.lambda_star, 0, 'ro', label=fr"$\lambda_c^* = {self.lambda_star:.4f}$")
+
+            plt.title(
             r"$p \, \lambda_c \sinh(\lambda_c) - "
             r"(1 - 2p + 2p \cosh(\lambda_c)) \, \ln(1 - 2p + 2p \cosh(\lambda_c)) = 0$"
-        )
-        plt.xlabel("λ")
-        plt.ylabel("Objective Value")
-        plt.legend()
+            )
+        plt.xlabel(r"$\lambda_c$")
+        plt.ylabel(r"$F(\lambda_c)$")
+        plt.legend(loc="lower left")
         plt.grid()
         plt.show()
+
 
     def subgaussian_variance_proxy(self, tol=1e-7):
         if self.p >= 1./6:
@@ -513,6 +521,7 @@ class SubGaussian3MassAssymetricProxy:
 
         self.variance = self.p1 + self.p2 - (self.p2 - self.p1) ** 2
         self.sigma_opt_squared = None
+        self.lambda_star = None
 
 
     def _logu0_and_r(self, lam: float):
@@ -623,6 +632,25 @@ class SubGaussian3MassAssymetricProxy:
 
         return None
 
+    def plot_objective_function(self, n_points=50000):
+
+        lambdas = np.linspace(self.lambda_star - 1, self.lambda_star + 1 , n_points)
+        equations = [self._equation(lam) for lam in lambdas]
+
+        plt.figure(figsize=(8, 5))
+        plt.plot(lambdas, equations, label=f"(p1, p2) = ({self.p1}, {self.p2}), a = 1")
+        plt.axhline(0, color='gray', lw=0.5, ls='--')
+
+        if np.isfinite(self.lambda_star):
+            plt.axvline(self.lambda_star, color="red", ls="--", lw=0.8)
+            plt.plot(self.lambda_star, 0, 'ro', label=fr"$\lambda^* = {self.lambda_star:.4f}$")
+
+        plt.title(r"$F(\lambda) := \lambda u_1(\lambda) - 2u_0(\lambda) \ln u_0(\lambda) + \lambda u_0(\lambda)(p_2 - p_1) = 0$")
+        plt.xlabel(r"$\lambda$")
+        plt.ylabel(r"$F(\lambda)$")
+        plt.legend(loc="lower left")
+        plt.grid()
+        plt.show()
 
     def subgaussian_variance_proxy(self, tol: float = 1e-8) -> float:
         """
@@ -646,13 +674,13 @@ class SubGaussian3MassAssymetricProxy:
             sol = root_scalar(self._equation, bracket=bracket, method='brentq', xtol=tol)
             if not (sol.converged and sol.root > 0.0):
                 raise RuntimeError("Brent failed to converge on a valid bracket for G(λ)=0.")
-            lam = float(sol.root)
-            _, r = self._logu0_and_r(lam)
+            self.lambda_star = float(sol.root)
+            _, r = self._logu0_and_r(self.lambda_star)
             if np.isclose(self.p1, self.p2, atol=1e-12, rtol=0.0):
-                self.sigma_opt_squared = r / lam
+                self.sigma_opt_squared = r / self.lambda_star
             else:
-                self.sigma_opt_squared = max(2.0 * (self.p2 - self.p1) / np.log(self.p2 / self.p1) , (r - (self.p2 - self.p1)) / lam)
-            return self.a**2 * self.sigma_opt_squared
+                self.sigma_opt_squared = max(2.0 * (self.p2 - self.p1) / np.log(self.p2 / self.p1) , (r - (self.p2 - self.p1)) / self.lambda_star)
+            return self.a**2 * self.sigma_opt_squared, self.lambda_star
 
 
         # lam_upper = self._lambda_minus() or 700.0
@@ -676,18 +704,21 @@ class SubGaussian3MassAssymetricProxy:
 
 
 class SubGaussianBetaProxy:
-    def __init__(self, alpha, beta):
+    #p1: float, p2: float, a: float
+    def __init__(self, alpha: float, beta: float):
         if alpha <= 0 or beta <= 0:
             raise ValueError("Parameters must be positive")
         self.alpha = alpha
         self.beta = beta 
         self.var = (self.alpha * self.beta) / ((self.alpha + self.beta) ** 2 * (self.alpha + self.beta + 1))
         self.mu = self.alpha / (self.alpha + self.beta)
+        self.sigma_opt_squared = None
+        self.lambda_star = None
 
         self.bounds_list = [2, 5, 10, 20, 50, 100]  
         self.bracket_scales = [1, 2, 5, 10, 20, 40]  
 
-    def h_beta(self, lam):
+    def h_beta(self, lam: float) -> float:
         """Compute h(λ) with safe fallback."""
         if abs(lam) < 1e-14:
             return self.var
@@ -703,12 +734,13 @@ class SubGaussianBetaProxy:
         
         return -np.inf  # Safe fallback for any error
 
-    def plot_objective_function(self, lam_min=-100, lam_max=100, n_points=50000):
+
+    def plot_objective_function(self, n_points=50000):
             """
             Plot h(λ) = 2/λ² * log E[exp(λ(X-μ))] and its maximum.
             """
-            
-            lam_vals = np.linspace(lam_min, lam_max, n_points)
+
+            lam_vals = np.linspace(self.lambda_star - 1, self.lambda_star + 1, n_points)
             h_vals = [self.h_beta(l) for l in lam_vals]
 
             opt_val, lam_star = self.subgaussian_variance_proxy()
@@ -758,10 +790,10 @@ class SubGaussianBetaProxy:
                     method='brent'
                 )
                 if result.success and np.isfinite(result.fun):
-                    optimal_value = -result.fun
-                    lambda_star = float(result.x)
-                    if optimal_value >= self.var * 0.999:
-                        return optimal_value, lambda_star
+                    self.sigma_opt_squared = -result.fun
+                    self.lambda_star = float(result.x)
+                    if self.sigma_opt_squared >= self.var * 0.999:
+                        return self.sigma_opt_squared, self.lambda_star
             except Exception:
                 continue
 
@@ -776,11 +808,11 @@ class SubGaussianBetaProxy:
                 if result.success and np.isfinite(result.fun):
                     optimal_value = -result.fun
                     if optimal_value >= self.var * 0.999 and optimal_value > sigma_opt_squared:
-                        sigma_opt_squared = optimal_value
-                        lambda_star = float(result.x)
+                        self.sigma_opt_squared = optimal_value
+                        self.lambda_star = float(result.x)
                         if abs(result.x) < 0.9 * bound:
                             break
             except Exception:
                 continue  
 
-        return sigma_opt_squared, lambda_star
+        return self.sigma_opt_squared, self.lambda_star
