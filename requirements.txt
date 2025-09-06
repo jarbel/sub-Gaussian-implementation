@@ -3,3 +3,5 @@ scipy
 matplotlib
 PyQt5
 setuptools
+# Already in stdlib for Python 3.7+, but add for compatibility
+dataclasses; python_version<'3.7'

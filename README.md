@@ -1,3 +1,6 @@
+
+![MIT License](https://img.shields.io/badge/license-MIT-green.svg)
+
 # Sub-Gaussian Proxy Variance Library
 
 This library provides tools to compute the **optimal sub-Gaussian variance proxy** for a variety of discrete and continuous probability distributions. It implements advanced algorithms for strict sub-Gaussianity, optimal proxy variance, and related properties, as described in recent probability literature.
@@ -11,11 +14,10 @@ This library provides tools to compute the **optimal sub-Gaussian variance proxy
 - **3-Mass Discrete Distributions**: Classes for symmetric and asymmetric 3-mass distributions.
 - **Beta and Kumaraswamy Distributions**: Compute the proxy for Beta and Kumaraswamy distributions, with adaptive optimization.
 
-```python
-python_requires=">=3.9"
-```
 
 ## Installation
+
+This library requires **Python 3.9 or higher**.
 
 ```bash
 pip install -r requirements.txt
@@ -40,16 +42,16 @@ from source.variance_proxy import (
 ### Example: Bernoulli Proxy
 
 ```python
-sigma2 = subgaussian_proxy_variance_bernoulli(0.3)
-print(f"Optimal proxy variance: {sigma2}")
+sigma_opt_squared = subgaussian_proxy_variance_bernoulli(0.3)
+print(f"Optimal proxy variance: {sigma_opt_squared}")
 ```
 
 ### Example: Triangular Distribution
 
 ```python
 tri = SubGaussianTriangularProxy(a=1, b=2)
-sigma2 = tri.subgaussian_optimal_variance_proxy()
-print(f"Optimal proxy variance: {sigma2}")
+sigma_opt_squared = tri.subgaussian_optimal_variance_proxy()
+print(f"Optimal proxy variance: {sigma_opt_squared}")
 ```
 
 ## API Overview
@@ -66,15 +68,21 @@ print(f"Optimal proxy variance: {sigma2}")
 - **SubGaussianBetaProxy(alpha, beta)**: Class for Beta distribution.
 - **SubGaussianKumaraswamyProxy(alpha, beta)**: Class for Kumaraswamy distribution.
 
-## References
+## References and Citations
+
+If you use this library in your research, please cite:
 
 - Barreto, M., Marchal, O., & Arbel, J. (2024). *Optimal sub-Gaussian variance proxy for truncated Gaussian and exponential random variables*.  
   *arXiv preprint*: [arXiv:2403.08628](https://arxiv.org/abs/2403.08628)
-
-- Marchal, O., & Arbel, J. (2017). *On the sub-Gaussianity of the Beta and Dirichlet distributions*.  
-  *arXiv preprint*: [arXiv:1705.06197](https://arxiv.org/abs/1705.06197)
 
 - Arbel, J., Marchal, O., & Nguyen, H. D. (2020). *On strict sub-Gaussianity, optimal proxy variance and symmetry for bounded random variables*.  
   ESAIM: Probability & Statistics, 24, 39–55.  
   *arXiv preprint*: [arXiv:1901.09188](https://arxiv.org/abs/1901.09188)
 
+- Marchal, O., & Arbel, J. (2017). *On the sub-Gaussianity of the Beta and Dirichlet distributions*.  
+  *arXiv preprint*: [arXiv:1705.06197](https://arxiv.org/abs/1705.06197)
+
+
+## Contributing
+
+Contributions, bug reports, and feature requests are welcome! Feel free to open an issue or submit a pull request.
