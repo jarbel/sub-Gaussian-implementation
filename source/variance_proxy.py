@@ -2,16 +2,13 @@ from scipy.optimize import root_scalar, minimize_scalar
 from scipy.special import hyp1f1, betaln
 #from scipy.special import beta as  beta_function
 from scipy.special import gamma as gammaln
-from scipy.integrate import quad
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 import numpy as np
 import warnings
 
 
-class AdaptiveSearchWarning(UserWarning):
-    """Indicates the adaptive optimization failed to converge properly."""
-    pass
+
 
 # P(X>t) < exp(-t²/2σ²)
 
@@ -172,10 +169,20 @@ def subgaussian_proxy_variance_truncated_random(a: float, b: float, mu: float, s
 
 class SubGaussianTriangularProxy:
     """
-    Triangular distribution with: 
-    a, b: positive parameters defining the support (-a, b)
-    Using proposition 2.4 in Arbel et al paper "On strict sub-Gaussianity, optimal proxy variance
-                                                and symmetry for bounded random variables" 
+    Class for computing the optimal sub-Gaussian variance proxy for 
+    Triangular distributions on (-a, b)
+
+    Attributes:
+    ----------
+    a : float
+        The first shape parameter (must satisfy  a > 0).
+    b : float
+        The second shape parameter (must satisfy b > 0).
+
+    Returns:
+    -------
+    sigma_opt_squared : float
+        The computed optimal variance proxy.
     """
     
     def __init__(self, a, b):
@@ -185,13 +192,12 @@ class SubGaussianTriangularProxy:
         
         self.a = a
         self.b = b
-        self.mean = (b - a) / 3  
         self.variance = (a**2 + a*b + b**2) / 18 
         self.lower = self.variance
+        self.sigma_opt_squared = self.variance
         self.hoeffding_bound = (self.a + self.b)**2 / 4 # (b-a)²/4 in (a,b) interval
 
         self.threshold_lambda_taylor = 1e-5
-        self.threshold_lambda_mgf_1 = 1e-8
         self.tolerance = 1e-9
         self.max_iter = 100
 
@@ -206,7 +212,7 @@ class SubGaussianTriangularProxy:
                 
         a, b = self.a, self.b
         
-        if abs(lam) < self.threshold_lambda_mgf_1:
+        if abs(lam) < self.tolerance:
             return 1.0
         
         # Compute the exponents
@@ -265,7 +271,6 @@ class SubGaussianTriangularProxy:
         return result
 
 
-    
     def delta_function(self, sigma2, lam):
         """
         Compute the Δ function from Proposition 2.4:
@@ -297,7 +302,7 @@ class SubGaussianTriangularProxy:
         delta_deriv = self.delta_derivative(sigma2, lam)
         return delta_val, delta_deriv
 
-    def _min_delta_over_lambda(self, sigma2, L0=4.0, L_max=1e4, step=0.02, edge_margin_pts=5):
+    def _min_delta_over_lambda(self, sigma2, L0=1.0, L_max=1e4, step=0.02, edge_margin_pts=5):
         """
         Find min_lambda Δ(σ², λ) with adaptive expansion of [-L, L].
         Start from L0 and double while the minimum sticks to the boundary.
@@ -331,7 +336,7 @@ class SubGaussianTriangularProxy:
         return vals[k], lam_star0, L_max
 
 
-    def subgaussian_variance_proxy(self, debug=False):
+    def subgaussian_optimal_variance_proxy(self, test=False):
         """
         Smallest σ² in [Var[X], Hoeffding] such that min_λ Δ(σ²,λ) >= 0. 
         """
@@ -343,14 +348,14 @@ class SubGaussianTriangularProxy:
         lo = float(self.variance)
         hi = float(self.hoeffding_bound)
 
-        val_hi, lam_hi, _ = self._min_delta_over_lambda(hi)
+        val_hi, _ , _ = self._min_delta_over_lambda(hi)
         if val_hi < -self.tolerance:
             warnings.warn(
-                    "[sigma2_opt_beta] Optimizer stuck at boundary Consider refining step, or improving numerical stability.",
-                    AdaptiveSearchWarning,
-                    stacklevel=2
-                )
-            if debug:
+                "[sigma2_opt_beta] Optimizer stuck at boundary. Consider refining step, or improving numerical stability.",
+                UserWarning,
+                stacklevel=2
+            )
+            if test:
                 return {
                     'optimal_proxy_variance': None,
                     'variance': self.variance,
@@ -361,37 +366,34 @@ class SubGaussianTriangularProxy:
             return None
         
 
-        best_lam = lam_hi
         for _ in range(self.max_iter):
             mid = 0.5 * (lo + hi)
-            val_mid, lam_mid, _ = self._min_delta_over_lambda(mid)
+            val_mid, _ , _ = self._min_delta_over_lambda(mid)
             if val_mid >= -self.tolerance:
                 hi = mid
-                best_lam = lam_mid
             else:
                 lo = mid
 
             if hi - lo <= self.tolerance * max(1.0, abs(hi)):
                 break
 
-        sigma_opt_squared = hi
-        min_delta, lam0, _ = self._min_delta_over_lambda(sigma_opt_squared)
+        self.sigma_opt_squared = hi
+        min_delta, lam0, _ = self._min_delta_over_lambda(self.sigma_opt_squared)
 
 
-        if debug:
+        if test:
             return {
-                'optimal_proxy_variance': sigma_opt_squared,
+                'optimal_proxy_variance': self.sigma_opt_squared,
                 'variance': self.variance,
                 'delta_at_critical_point': min_delta,             
-                'delta_derivative_at_critical_point': 0.0,   
+                'delta_derivative_at_critical_point': self.delta_derivative(self.sigma_opt_squared, lam0),   
                 'min_delta_over_range': min_delta,
                 'non_negative_condition_satisfied': (min_delta >= -self.tolerance),
                 'critical_point_lambda': lam0,
-                'is_strictly_subgaussian': abs(sigma_opt_squared - self.variance) < self.tolerance
+                'is_strictly_subgaussian': abs(self.sigma_opt_squared - self.variance) < self.tolerance
             }
 
-        return sigma_opt_squared
-
+        return self.sigma_opt_squared
 
 
 class SubGaussian3MassSymetricProxy:
@@ -412,6 +414,8 @@ class SubGaussian3MassSymetricProxy:
     -------
     sigma_opt_squared : float
         The computed optimal variance proxy (initialized after computation).
+    lambda_star : float
+        The critical point λ* where the optimal proxy is achieved 
         
     """
 
@@ -432,6 +436,40 @@ class SubGaussian3MassSymetricProxy:
         equation = self.p * lambda_c * np.sinh(lambda_c) - term * np.log(term)
         return equation
 
+
+
+    def subgaussian_optimal_variance_proxy(self, tol=1e-7):
+        if self.p >= 1./6:
+            self.sigma_opt_squared = self.lower_bound
+    
+        else:
+            lambdas = np.linspace(self.lambda_0 + tol, 50, 5000)
+            signs = np.sign([self._equation(lam) for lam in lambdas])
+
+            for i in range(len(signs) - 1):
+                if signs[i] != signs[i + 1]:
+                    a, b = lambdas[i], lambdas[i + 1]
+                    result = root_scalar(
+                        self._equation, bracket=[a, b], method='bisect', xtol=tol
+                        )
+
+                    if result.converged:
+                        self.lambda_star = result.root
+                        denom = 2 * self.p * np.cosh(self.lambda_star) + 1 - 2 * self.p
+                        self.sigma_opt_squared = (
+                            2 * self.p * np.sinh(self.lambda_star)
+                        ) / (self.lambda_star * denom)
+                    else:
+                        warnings.warn("Root-finding did not converge in SubGaussian3MassSymetricProxy.", UserWarning)
+                        raise RuntimeError("Root-finding did not converge.")
+                    break
+            else:
+                warnings.warn(f"No sign change found; root cannot be located for p = {self.p}", UserWarning)
+                self.sigma_opt_squared  = np.nan
+                self.lambda_star = np.nan
+
+        return self.a**2 * self.sigma_opt_squared, self.lambda_star
+    
     def plot_objective_function(self):
         
         lambdas = np.linspace(self.lambda_star - 1, self.lambda_star + 1 , 5000)
@@ -455,38 +493,6 @@ class SubGaussian3MassSymetricProxy:
         plt.grid()
         plt.show()
 
-
-    def subgaussian_variance_proxy(self, tol=1e-7):
-        if self.p >= 1./6:
-            self.sigma_opt_squared = self.lower_bound
-    
-        else:
-            lambdas = np.linspace(self.lambda_0 + tol, 50, 5000)
-            signs = np.sign([self._equation(lam) for lam in lambdas])
-
-            for i in range(len(signs) - 1):
-                if signs[i] != signs[i + 1]:
-                    a, b = lambdas[i], lambdas[i + 1]
-                    result = root_scalar(
-                        self._equation, bracket=[a, b], method='bisect', xtol=tol
-                        )
-                    if result.converged:
-                        self.lambda_star = result.root
-                        denom = 2 * self.p * np.cosh(self.lambda_star) + 1 - 2 * self.p
-                        self.sigma_opt_squared = (
-                            2 * self.p * np.sinh(self.lambda_star)
-                        ) / (self.lambda_star * denom)
-                    else:
-                        raise RuntimeError("Root-finding did not converge.")
-                    break
-            else:
-                self.sigma_opt_squared  = np.nan
-                self.lambda_star = np.nan
-                warnings.warn(f"No sign change found; root cannot be located for p = {self.p}")
-
-        return self.a**2 * self.sigma_opt_squared, self.lambda_star
-    
-
 class SubGaussian3MassAssymetricProxy:
     """
     Class for computing the optimal sub-Gaussian variance proxy for assymetric 3-mass distribution on {-a, 0, +a}
@@ -506,6 +512,8 @@ class SubGaussian3MassAssymetricProxy:
     -------
     sigma_opt_squared : float
         The computed optimal variance proxy (initialized after computation).
+    lambda_star : float
+        The critical point λ* where the optimal proxy is achieved.
    
     """
 
@@ -635,6 +643,40 @@ class SubGaussian3MassAssymetricProxy:
 
         return None
 
+
+    def subgaussian_optimal_variance_proxy(self, tol: float = 1e-8) -> float:
+        """
+        Return a^2 * sigma_opt_squared (no NaN):
+        - Easy regime (p3 <= 4*sqrt(p1*p2)): exact closed-form (boundary at λ→0+).
+        - Hard regime (p3  > 4*sqrt(p1*p2)):
+            * If an interior root exists: solve G(λ)=0 (Brent).
+            * If no interior root on (0, λ_max]: optimum lies at a boundary:
+                · if G(λ)>0 throughout → maximum at upper boundary,
+                · if G(λ)<0 throughout → maximum at λ→0^+ (closed-form).
+        """
+     
+
+        if self.p3 <= 4.0 * np.sqrt(self.p1 * self.p2):
+            self.sigma_opt_squared = self._default_proxy_first_regime()
+            return self.a**2 * self.sigma_opt_squared
+
+
+        bracket = self._bracket_root()
+
+        if bracket is not None:
+            sol = root_scalar(self._equation, bracket=bracket, method='brentq', xtol=tol)
+            if not (sol.converged and sol.root > 0.0):
+                warnings.warn("Brent failed to converge on a valid bracket for G(λ)=0 in SubGaussian3MassAssymetricProxy.", UserWarning)
+                raise RuntimeError("Brent failed to converge on a valid bracket for G(λ)=0.")
+            self.lambda_star = float(sol.root)
+            _, r = self._logu0_and_r(self.lambda_star)
+            if np.isclose(self.p1, self.p2, atol=1e-12, rtol=0.0):
+                self.sigma_opt_squared = r / self.lambda_star
+            else:
+                self.sigma_opt_squared = max(2.0 * (self.p2 - self.p1) / np.log(self.p2 / self.p1) , (r - (self.p2 - self.p1)) / self.lambda_star)
+            return self.a**2 * self.sigma_opt_squared, self.lambda_star
+
+
     def plot_objective_function(self, n_points: int = 50000):
 
         lambdas = np.linspace(self.lambda_star - 1, self.lambda_star + 1 , n_points)
@@ -654,60 +696,31 @@ class SubGaussian3MassAssymetricProxy:
         plt.legend(loc="lower left")
         plt.grid()
         plt.show()
-
-    def subgaussian_variance_proxy(self, tol: float = 1e-8) -> float:
-        """
-        Return a^2 * sigma_opt_squared (no NaN):
-        - Easy regime (p3 <= 4*sqrt(p1*p2)): exact closed-form (boundary at λ→0+).
-        - Hard regime (p3  > 4*sqrt(p1*p2)):
-            * If an interior root exists: solve G(λ)=0 (Brent).
-            * If no interior root on (0, λ_max]: optimum lies at a boundary:
-                · if G(λ)>0 throughout → maximum at upper boundary,
-                · if G(λ)<0 throughout → maximum at λ→0^+ (closed-form).
-        """
-     
-
-        if self.p3 <= 4.0 * np.sqrt(self.p1 * self.p2):
-            self.sigma_opt_squared = self._default_proxy_first_regime()
-            return self.a**2 * self.sigma_opt_squared
-
-
-        bracket = self._bracket_root()
-        if bracket is not None:
-            sol = root_scalar(self._equation, bracket=bracket, method='brentq', xtol=tol)
-            if not (sol.converged and sol.root > 0.0):
-                raise RuntimeError("Brent failed to converge on a valid bracket for G(λ)=0.")
-            self.lambda_star = float(sol.root)
-            _, r = self._logu0_and_r(self.lambda_star)
-            if np.isclose(self.p1, self.p2, atol=1e-12, rtol=0.0):
-                self.sigma_opt_squared = r / self.lambda_star
-            else:
-                self.sigma_opt_squared = max(2.0 * (self.p2 - self.p1) / np.log(self.p2 / self.p1) , (r - (self.p2 - self.p1)) / self.lambda_star)
-            return self.a**2 * self.sigma_opt_squared, self.lambda_star
-
-
-        # lam_upper = self._lambda_minus() or 700.0
-        # # Evaluate G at both ends (numerically meaningful near 0)
-        # lam_low_eval = max(1e-12, np.sqrt(1e-12 / max(self.p1, self.p2, 1e-15)))
-        # g_low = self._equation(lam_low_eval)
-        # g_up = self._equation(lam_upper)
-
-        # if np.isfinite(g_up) and g_up > 0.0 and (not np.isfinite(g_low) or g_low >= 0.0):
-        #     # Monotone positive → optimum at upper boundary
-        #     _, r_up = self._logu0_and_r(lam_upper)
-        #     if np.isclose(self.p1, self.p2, atol=1e-12, rtol=0.0):
-        #         self.sigma_opt_squared = r_up / lam_upper
-        #     else:
-        #         self.sigma_opt_squared = (r_up - (self.p2 - self.p1)) / lam_upper
-        # else:
-        #     self.sigma_opt_squared = self.variance if self.p1 == self.p2 else self._default_proxy_first_regime()
-
-        # return self.a ** 2 * self.sigma_opt_squared
-
-
+        
+        
 
 class SubGaussianBetaProxy:
-    #p1: float, p2: float, a: float
+
+    """
+    Class for computing the optimal sub-Gaussian variance proxy for 
+    Beta distributions 
+
+    Attributes:
+    ----------
+    alpha : float
+        The first shape parameter (must satisfy  alpha > 0).
+    beta : float
+        The second shape parameter (must satisfy beta > 0).
+
+    Returns:
+    -------
+    sigma_opt_squared : float
+        The computed optimal variance proxy (initialized after computation).
+    lambda_star : float
+        The optimal λ maximizing h(λ).
+        
+    """
+    
     def __init__(self, alpha: float, beta: float):
         if alpha <= 0 or beta <= 0:
             raise ValueError("Parameters must be positive")
@@ -746,7 +759,7 @@ class SubGaussianBetaProxy:
             lam_vals = np.linspace(self.lambda_star - 1, self.lambda_star + 1, n_points)
             h_vals = [self.h_beta(l) for l in lam_vals]
 
-            opt_val, lam_star = self.subgaussian_variance_proxy()
+            opt_val, lam_star = self.subgaussian_optimal_variance_proxy()
 
             plt.figure(figsize=(8, 5))
             plt.plot(lam_vals, h_vals, label="h(λ)")
@@ -761,7 +774,7 @@ class SubGaussianBetaProxy:
             plt.grid(True)
             plt.show()    
             
-    def subgaussian_variance_proxy(self):
+    def subgaussian_optimal_variance_proxy(self):
         """
         Adaptive bound search for σ²_opt = max_λ h(λ) where
         h(λ) = 2/λ² * log( E[exp(λ(X-μ))] ) with X ~ Beta(alpha, beta).
@@ -822,9 +835,26 @@ class SubGaussianBetaProxy:
 
 
     class SubGaussianKumaraswamyProxy:
+
         """
-        Sub-Gaussian variance proxy for X ~ Kumaraswamy(alpha, beta) on (0,1).
-        h(lam) = 2/lam^2 * log E[exp(lam (X - mu))].
+        Class for computing the optimal sub-Gaussian variance proxy for 
+        Kumaraswamy distributions 
+
+        Attributes:
+        ----------
+        alpha : float
+            The first shape parameter (must satisfy  alpha > 0).
+        beta : float
+            The second shape parameter (must satisfy beta > 0).
+
+        Returns:
+        -------
+        sigma_opt_squared : float
+            The computed optimal variance proxy (initialized after computation).
+            
+        lambda_star : float
+            The optimal λ maximizing h(λ).
+        
         """
 
         def __init__(self, alpha: float, beta: float):
@@ -913,7 +943,7 @@ class SubGaussianBetaProxy:
             result = (2.0 / (lam * lam)) * log_mgf_centered
             return result if np.isfinite(result) else -np.inf
 
-        def subgaussian_variance_proxy(self):
+        def subgaussian_optimal_variance_proxy(self):
             """
             Adaptive search for σ²_opt = max_λ h(λ) with X ~ Kumaraswamy(α, β).
             Returns (sigma_opt_squared, lambda_star).
@@ -970,7 +1000,7 @@ class SubGaussianBetaProxy:
             """
             Plot h(λ) and indicate the maximizer.
             """
-            sigma_opt_squared, lam_star = self.subgaussian_variance_proxy()
+            sigma_opt_squared, lam_star = self.subgaussian_optimal_variance_proxy()
             width = 1.0 if lam_star == 0 else max(1.0, 0.5 * (1.0 + abs(lam_star)))
             lam_vals = np.linspace(lam_star - width, lam_star + width, n_points)
             h_vals = [self.h_kumar(l) for l in lam_vals]

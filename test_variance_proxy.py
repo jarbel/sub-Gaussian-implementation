@@ -21,11 +21,11 @@ if check_assymetric_symmetric:
     proxy_variances_s = []
     for p in p_values:
         objAssym = SubGaussian3MassAssymetricProxy(p1=p, p2=p, a=1)
-        sigma_opt_squared, _ = objAssym.subgaussian_variance_proxy()
+        sigma_opt_squared, _ = objAssym.subgaussian_optimal_variance_proxy()
         proxy_variances_ass.append(sigma_opt_squared)
         
         objSym = SubGaussian3MassSymetricProxy(p)
-        sigma_opt_squared, _ = objSym.subgaussian_variance_proxy()
+        sigma_opt_squared, _ = objSym.subgaussian_optimal_variance_proxy()
         proxy_variances_s.append(sigma_opt_squared)
 
     proxy_variances_ass = np.array(proxy_variances_ass)
@@ -80,7 +80,7 @@ if replicate_paper_beta_bernoulli_figs:
 
         for a, b in zip(alphas, betas):
             obj = SubGaussianBetaProxy(a, b)
-            sigma_opt_squared, _ = obj.subgaussian_variance_proxy()
+            sigma_opt_squared, _ = obj.subgaussian_optimal_variance_proxy()
             beta_sigma_opts.append(sigma_opt_squared)
             bernoulli_sigma_opts.append(subgaussian_proxy_variance_bernoulli(a))
 
@@ -114,7 +114,7 @@ if replicate_paper_beta_bernoulli_figs:
             sigma2 = []
             for a, b in zip(alphas, betas):
                 obj = SubGaussianBetaProxy(a, b)
-                sigma_opt_squared, _ = obj.subgaussian_variance_proxy()
+                sigma_opt_squared, _ = obj.subgaussian_optimal_variance_proxy()
                 sigma2.append(sigma_opt_squared)
             plt.plot(mu, sigma2, lw=2, color=cmap(norm(S)))
 
@@ -138,11 +138,11 @@ if test_3mass_sym_and_assym:
     proxy_variances_s = []
     for p in p_values:
         objAss = SubGaussian3MassAssymetricProxy(p1=p, p2=p, a=1)
-        sigma2_opt_ass, _ = objAss.subgaussian_variance_proxy()
+        sigma2_opt_ass, _ = objAss.subgaussian_optimal_variance_proxy()
         proxy_variances_ass.append(sigma2_opt_ass)
         
         objS = SubGaussian3MassSymetricProxy(p)
-        sigma_opt_squared, _ = objS.subgaussian_variance_proxy()
+        sigma_opt_squared, _ = objS.subgaussian_optimal_variance_proxy()
         proxy_variances_s.append(sigma_opt_squared)
         
     plt.figure(figsize=(8, 6))
@@ -165,7 +165,7 @@ if test_3mass_sym_and_assym:
 
     for p in p_values:
         obj = SubGaussian3MassSymetricProxy(p)
-        sigma_opt_squared, _ = obj.subgaussian_variance_proxy()
+        sigma_opt_squared, _ = obj.subgaussian_optimal_variance_proxy()
         sigma_opt_squared_values.append(sigma_opt_squared)
         sigma_up_values.append(obj.upper_bound)
         sigma_2p_values.append(2 * p)
@@ -192,7 +192,7 @@ if test_3mass_sym_and_assym:
             s+=1
             if (p2 >= p1 and p1+p2<1):
                 obj = SubGaussian3MassAssymetricProxy(p1, p2, a=1)
-                sigma2_opt, _  = obj.subgaussian_variance_proxy()
+                sigma2_opt, _  = obj.subgaussian_optimal_variance_proxy()
                 if np.isnan(sigma2_opt):
                     f+=1
                     print(p1, p2, sigma2_opt)
