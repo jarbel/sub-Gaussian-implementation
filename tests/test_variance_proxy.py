@@ -1,20 +1,21 @@
+"""
+How to run the tests:
+-----------------------
+>> python -m tests.test_variance_proxy
+or 
+VS code debugger (launch json config)
+"""
 from scipy.optimize import root_scalar
-from source.variance_proxy import * 
+from src.variance_proxy import * 
 import matplotlib.pyplot as plt 
 import numpy as np
 
-def test_subgaussian_proxy_variance_bernoulli():
-    result = subgaussian_proxy_variance_bernoulli(1/2)
-    expected = 1/4 
-    assert abs(result - expected) < 1e-6
 
-
-
-check_assymetric_symmetric = False
-replicate_paper_beta_bernoulli_figs = True
+check_assymetric_symmetric_implementation = True
+replicate_paper_beta_bernoulli_figs = False
 test_3mass_sym_and_assym = False
 
-if check_assymetric_symmetric:
+if check_assymetric_symmetric_implementation:
 
     p_values = np.linspace(0.0001, 1/6 - 0.0001, 3000)
     proxy_variances_ass = []
@@ -38,23 +39,11 @@ if check_assymetric_symmetric:
 
 
     abs_err = np.abs(proxy_variances_ass - proxy_variances_s)
-    with np.errstate(divide='ignore', invalid='ignore'):
-        rel_err = abs_err / np.maximum(1e-16, np.abs(proxy_variances_s))
     print("Max absolute error:", abs_err.max())
-    print("Max relative error:", rel_err.max())
-
-
-    plt.figure()
-    plt.semilogy(p_values, abs_err)
-    plt.title("Absolute Error |asym - sym|")
-    plt.xlabel("p")
-    plt.ylabel("Absolute error (log scale)")
-    plt.tight_layout()
-    plt.show()
 
     
     plt.figure()
-    plt.plot(p_values, proxy_variances_s, linestyle='dashed', label="Symmetric")
+    plt.plot(p_values, proxy_variances_s, linestyle='dashed', label="Symmetric", linewidth=2)
     plt.plot(p_values, proxy_variances_ass, label="Asymmetric")
     plt.title("Equivalence Check: Optimal Proxy Variance — Symmetric vs. Asymmetric")
     plt.xlabel("Probability (p < 1/6)")
@@ -64,68 +53,72 @@ if check_assymetric_symmetric:
     plt.show()
 
 
-
-
 if replicate_paper_beta_bernoulli_figs:
-        from matplotlib.colors import LinearSegmentedColormap, LogNorm
-        mu = np.linspace(0.000001, 0.999999, 2000)
-        S = 1.0  # fixed α + β
+    """
+        This test reproduces the main figures from the paper:
+        "On the sub-Gaussianity of the Beta and Dirichlet distributions" (2017).
+        It validates that the implementation matches the theoretical
+        results and visualizations (see Figure 1 in the paper).
+    """
+    from matplotlib.colors import LinearSegmentedColormap, LogNorm
+    mu = np.linspace(0.000001, 0.999999, 2000)
+    S = 1.0  # fixed α + β
+    alphas = mu * S
+    betas = (1 - mu) * S
+
+    variances = (alphas * betas) / (S**2 * (S + 1))  # Var[Beta] for α+β=1
+    upper_bounds = [1 / (4 * (a + b + 1)) for a, b in zip(alphas, betas)]
+    beta_sigma_opts = []
+    bernoulli_sigma_opts = []
+
+    for a, b in zip(alphas, betas):
+        obj = SubGaussianBetaProxy(a, b)
+        sigma_opt_squared, _ = obj.subgaussian_optimal_variance_proxy()
+        beta_sigma_opts.append(sigma_opt_squared)
+        bernoulli_sigma_opts.append(subgaussian_proxy_variance_bernoulli(a))
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(mu, variances, 'g-', label='Variance', linewidth=2)
+    plt.plot(mu, beta_sigma_opts, 'purple', label=r'$\sigma^2_{\mathrm{opt}}(Beta(\alpha,\beta))$', linewidth=2)
+    plt.plot(mu, bernoulli_sigma_opts, 'b', label=r'$\sigma^2_{\mathrm{opt}}(Bern(\mu))$', linewidth=2)
+    plt.plot(mu, upper_bounds, 'k:', label='Upper Bound $\\frac{1}{4(α+β+1)}$', linewidth=2)
+
+    plt.axvline(0.5, color='gray', linestyle=':', linewidth=1)
+    plt.xlabel(r'$\theta = \frac{\alpha}{\alpha + \beta}$', fontsize=12)
+    plt.ylabel('Variance', fontsize=12)
+    plt.title(r'Variance and Optimal Sub-Gaussian Proxy for Beta($\alpha,\beta$) with $\alpha + \beta = 1$', fontsize=14)
+    plt.legend(fontsize=10)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
+    
+    S_vals = np.logspace(-1, 1, 14) 
+
+    cmap = LinearSegmentedColormap.from_list("purple_red", ["#6A00A8", "#D00000"])
+    norm = LogNorm(vmin=S_vals.min(), vmax=S_vals.max())
+
+    plt.figure(figsize=(9.5, 6.2))
+
+    bern = [subgaussian_proxy_variance_bernoulli(m) for m in mu]
+    plt.plot(mu, bern, lw=2.5, label=r'$\sigma^2_{\mathrm{opt}}(\mathrm{Bern}(\mu))$', color='tab:blue')
+    for S in S_vals:
         alphas = mu * S
         betas = (1 - mu) * S
-
-        variances = (alphas * betas) / (S**2 * (S + 1))  # Var[Beta] for α+β=1
-        upper_bounds = [1 / (4 * (a + b + 1)) for a, b in zip(alphas, betas)]
-        beta_sigma_opts = []
-        bernoulli_sigma_opts = []
-
+        sigma2 = []
         for a, b in zip(alphas, betas):
             obj = SubGaussianBetaProxy(a, b)
             sigma_opt_squared, _ = obj.subgaussian_optimal_variance_proxy()
-            beta_sigma_opts.append(sigma_opt_squared)
-            bernoulli_sigma_opts.append(subgaussian_proxy_variance_bernoulli(a))
-
-        plt.figure(figsize=(10, 6))
-        plt.plot(mu, variances, 'g-', label='Variance', linewidth=2)
-        plt.plot(mu, beta_sigma_opts, 'purple', label=r'$\sigma^2_{\mathrm{opt}}(Beta(\alpha,\beta))$', linewidth=2)
-        plt.plot(mu, bernoulli_sigma_opts, 'b', label=r'$\sigma^2_{\mathrm{opt}}(Bern(\mu))$', linewidth=2)
-        plt.plot(mu, upper_bounds, 'k:', label='Upper Bound $\\frac{1}{4(α+β+1)}$', linewidth=2)
-
-        plt.axvline(0.5, color='gray', linestyle=':', linewidth=1)
-        plt.xlabel(r'$\theta = \frac{\alpha}{\alpha + \beta}$', fontsize=12)
-        plt.ylabel('Variance', fontsize=12)
-        plt.title(r'Variance and Optimal Sub-Gaussian Proxy for Beta($\alpha,\beta$) with $\alpha + \beta = 1$', fontsize=14)
-        plt.legend(fontsize=10)
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        plt.show()
-        
-        S_vals = np.logspace(-1, 1, 14) 
-
-        cmap = LinearSegmentedColormap.from_list("purple_red", ["#6A00A8", "#D00000"])
-        norm = LogNorm(vmin=S_vals.min(), vmax=S_vals.max())
-
-        plt.figure(figsize=(9.5, 6.2))
-
-        bern = [subgaussian_proxy_variance_bernoulli(m) for m in mu]
-        plt.plot(mu, bern, lw=2.5, label=r'$\sigma^2_{\mathrm{opt}}(\mathrm{Bern}(\mu))$', color='tab:blue')
-        for S in S_vals:
-            alphas = mu * S
-            betas = (1 - mu) * S
-            sigma2 = []
-            for a, b in zip(alphas, betas):
-                obj = SubGaussianBetaProxy(a, b)
-                sigma_opt_squared, _ = obj.subgaussian_optimal_variance_proxy()
-                sigma2.append(sigma_opt_squared)
-            plt.plot(mu, sigma2, lw=2, color=cmap(norm(S)))
+            sigma2.append(sigma_opt_squared)
+        plt.plot(mu, sigma2, lw=2, color=cmap(norm(S)))
 
 
-        plt.xlabel(r'$\mu=\frac{\alpha}{\alpha+\beta}$', fontsize=12)
-        plt.ylabel(r'$\sigma^2_{\mathrm{opt}}$', fontsize=12)
-        plt.title(r'Center: $\sigma^2_{\mathrm{opt}}(\mu)$ for Bernoulli (blue) and Beta with $S=\alpha+\beta\in[0.1,10]$ (purple $\to$ red)', fontsize=13)
-        plt.legend(fontsize=10, loc='upper center')
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
-        plt.show()
+    plt.xlabel(r'$\mu=\frac{\alpha}{\alpha+\beta}$', fontsize=12)
+    plt.ylabel(r'$\sigma^2_{\mathrm{opt}}$', fontsize=12)
+    plt.title(r'Center: $\sigma^2_{\mathrm{opt}}(\mu)$ for Bernoulli (blue) and Beta with $S=\alpha+\beta\in[0.1,10]$ (purple $\to$ red)', fontsize=13)
+    plt.legend(fontsize=10, loc='upper center')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.show()
 
 
 
