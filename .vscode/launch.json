@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Run test_variance_proxy.py as module",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "tests.test_variance_proxy",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Pytest: Run test_unit_variance_proxy.py",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "args": ["tests/test_unit_variance_proxy.py", "-v"],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}

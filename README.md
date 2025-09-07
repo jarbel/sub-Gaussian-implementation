@@ -61,7 +61,7 @@ print(f"Optimal proxy variance: {sigma_opt_squared}")
 - **subgaussian_proxy_variance_uniform(a, b)**: Proxy for Uniform(a, b).
 - **subgaussian_proxy_variance_sum_independant_uniform(segments)**: Proxy for sum of independent uniforms.
 - **subgaussian_discrete_uniforme_variance_proxy(a, n)**: Proxy for discrete uniform.
-- **subgaussian_proxy_variance_truncated_random(a, b, mu, sigma2)**: Proxy for truncated normal.
+- **subgaussian_proxy_variance_truncated_normal(a, b, mu, sigma2)**: Proxy for truncated normal.
 - **SubGaussianTriangularProxy(a, b)**: Class for triangular distribution.
 - **SubGaussian3MassSymetricProxy(p, a)**: Class for symmetric 3-mass distribution.
 - **SubGaussian3MassAssymetricProxy(p1, p2, a)**: Class for asymmetric 3-mass distribution.
