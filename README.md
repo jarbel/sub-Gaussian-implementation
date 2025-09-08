@@ -33,8 +33,8 @@ from src.variance_proxy import (
     subgaussian_proxy_variance_binomial,
     subgaussian_proxy_variance_uniform,
     SubGaussianTriangularProxy,
-    SubGaussian3MassSymetricProxy,
-    SubGaussian3MassAssymetricProxy,
+    SubGaussian3MassSymmetricProxy,
+    SubGaussian3MassAsymmetricProxy,
     SubGaussianBetaProxy,
 )
 ```
@@ -59,13 +59,13 @@ print(f"Optimal proxy variance: {sigma_opt_squared}")
 - **subgaussian_proxy_variance_bernoulli(p)**: Optimal proxy for Bernoulli(p).
 - **subgaussian_proxy_variance_binomial(n, p)**: Optimal proxy for Binomial(n, p).
 - **subgaussian_proxy_variance_uniform(a, b)**: Proxy for Uniform(a, b).
-- **subgaussian_proxy_variance_sum_independant_uniform(segments)**: Proxy for sum of independent uniforms.
+- **subgaussian_proxy_variance_sum_independent_uniform(segments)**: Proxy for sum of independent uniforms.
 - **subgaussian_discrete_uniforme_variance_proxy(a, n)**: Proxy for discrete uniform.
 - **subgaussian_proxy_variance_truncated_normal(a, b, mu, sigma2)**: Proxy for truncated normal.
 - **Subgaussian_proxy_variance_truncated_exponential(a, b, lam)**: Proxy for truncated exponential.
 - **SubGaussianTriangularProxy(a, b)**: Class for triangular distribution.
-- **SubGaussian3MassSymetricProxy(p, a)**: Class for symmetric 3-mass distribution.
-- **SubGaussian3MassAssymetricProxy(p1, p2, a)**: Class for asymmetric 3-mass distribution.
+- **SubGaussian3MassSymmetricProxy(p, a)**: Class for symmetric 3-mass distribution.
+- **SubGaussian3MassAsymmetricProxy(p1, p2, a)**: Class for asymmetric 3-mass distribution.
 - **SubGaussianBetaProxy(alpha, beta)**: Class for Beta distribution.
 - **SubGaussianKumaraswamyProxy(alpha, beta)**: Class for Kumaraswamy distribution.
 

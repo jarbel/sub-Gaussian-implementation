@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-check_assymetric_symmetric_implementation = True
+check_asymmetric_symmetric_implementation = True
 replicate_paper_beta_bernoulli_figs = False
 test_3mass_sym_and_assym = False
 
@@ -21,11 +21,11 @@ if check_assymetric_symmetric_implementation:
     proxy_variances_ass = []
     proxy_variances_s = []
     for p in p_values:
-        objAssym = SubGaussian3MassAssymetricProxy(p1=p, p2=p, a=1)
+        objAssym = SubGaussian3MassAsymmetricProxy(p1=p, p2=p, a=1)
         sigma_opt_squared, _ = objAssym.subgaussian_optimal_variance_proxy()
         proxy_variances_ass.append(sigma_opt_squared)
         
-        objSym = SubGaussian3MassSymetricProxy(p)
+        objSym = SubGaussian3MassSymmetricProxy(p)
         sigma_opt_squared, _ = objSym.subgaussian_optimal_variance_proxy()
         proxy_variances_s.append(sigma_opt_squared)
 
@@ -130,11 +130,11 @@ if test_3mass_sym_and_assym:
     proxy_variances_ass = []
     proxy_variances_s = []
     for p in p_values:
-        objAss = SubGaussian3MassAssymetricProxy(p1=p, p2=p, a=1)
+        objAss = SubGaussian3MassAsymmetricProxy(p1=p, p2=p, a=1)
         sigma2_opt_ass, _ = objAss.subgaussian_optimal_variance_proxy()
         proxy_variances_ass.append(sigma2_opt_ass)
         
-        objS = SubGaussian3MassSymetricProxy(p)
+        objS = SubGaussian3MassSymmetricProxy(p)
         sigma_opt_squared, _ = objS.subgaussian_optimal_variance_proxy()
         proxy_variances_s.append(sigma_opt_squared)
         
@@ -157,7 +157,7 @@ if test_3mass_sym_and_assym:
     sigma_2p_values = []
 
     for p in p_values:
-        obj = SubGaussian3MassSymetricProxy(p)
+        obj = SubGaussian3MassSymmetricProxy(p)
         sigma_opt_squared, _ = obj.subgaussian_optimal_variance_proxy()
         sigma_opt_squared_values.append(sigma_opt_squared)
         sigma_up_values.append(obj.upper_bound)
@@ -184,7 +184,7 @@ if test_3mass_sym_and_assym:
         for p2 in np.arange(0.001, 1-0.001, 0.001):
             s+=1
             if (p2 >= p1 and p1+p2<1):
-                obj = SubGaussian3MassAssymetricProxy(p1, p2, a=1)
+                obj = SubGaussian3MassAsymmetricProxy(p1, p2, a=1)
                 sigma2_opt, _  = obj.subgaussian_optimal_variance_proxy()
                 if np.isnan(sigma2_opt):
                     f+=1

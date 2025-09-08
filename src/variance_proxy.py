@@ -81,7 +81,7 @@ def subgaussian_proxy_variance_uniform(a: float, b: float) -> float:
 
     return 1/12 * (b-a)**2
 
-def subgaussian_proxy_variance_sum_independant_uniform(segments: tuple) -> float:
+def subgaussian_proxy_variance_sum_independent_uniform(segments: tuple) -> float:
     
     """
     Parameters:
@@ -145,7 +145,7 @@ def subgaussian_proxy_variance_truncated_normal(a: float, b: float, mu: float, s
     Returns:
     - float: optimal sub-Gaussian variance proxy
     """
-    if  a < b:
+    if  a >= b:
         raise ValueError("Invalid interval: require a < b")
     sigma = np.sqrt(sigma_opt_squared)
     alpha = (a - mu) / sigma
@@ -443,7 +443,7 @@ class SubGaussianTriangularProxy:
         plt.show()
 
 
-class SubGaussian3MassSymetricProxy:
+class SubGaussian3MassSymmetricProxy:
 
     """
     Class for computing the optimal sub-Gaussian variance proxy for 
@@ -508,7 +508,7 @@ class SubGaussian3MassSymetricProxy:
                             2 * self.p * np.sinh(self.lambda_star)
                         ) / (self.lambda_star * denom)
                     else:
-                        warnings.warn("Root-finding did not converge in SubGaussian3MassSymetricProxy.", UserWarning)
+                        warnings.warn("Root-finding did not converge in SubGaussian3MassSymmetricProxy.", UserWarning)
                         raise RuntimeError("Root-finding did not converge.")
                     break
             else:
@@ -544,7 +544,7 @@ class SubGaussian3MassSymetricProxy:
         plt.grid()
         plt.show()
 
-class SubGaussian3MassAssymetricProxy:
+class SubGaussian3MassAsymmetricProxy:
     """
     Class for computing the optimal sub-Gaussian variance proxy for assymetric 3-mass distribution on {-a, 0, +a}
     with probabilities: p1 at -a, p3=1-p1-p2 at 0, p2 at +a.
@@ -717,7 +717,7 @@ class SubGaussian3MassAssymetricProxy:
         if bracket is not None:
             sol = root_scalar(self._equation, bracket=bracket, method='brentq', xtol=tol)
             if not (sol.converged and sol.root > 0.0):
-                warnings.warn("Brent failed to converge on a valid bracket for G(λ)=0 in SubGaussian3MassAssymetricProxy.", UserWarning)
+                warnings.warn("Brent failed to converge on a valid bracket for G(λ)=0 in SubGaussian3MassAsymmetricProxy.", UserWarning)
                 raise RuntimeError("Brent failed to converge on a valid bracket for G(λ)=0.")
             self.lambda_star = float(sol.root)
             _, r = self._logu0_and_r(self.lambda_star)
@@ -894,187 +894,187 @@ class SubGaussianBetaProxy:
         return self.sigma_opt_squared, self.lambda_star
 
 
-    class SubGaussianKumaraswamyProxy:
+class SubGaussianKumaraswamyProxy:
 
-        """
-        Class for computing the optimal sub-Gaussian variance proxy for 
-        Kumaraswamy distributions 
+    """
+    Class for computing the optimal sub-Gaussian variance proxy for 
+    Kumaraswamy distributions 
 
-        Attributes:
-        ----------
-        alpha : float
-            The first shape parameter (must satisfy  alpha > 0).
-        beta : float
-            The second shape parameter (must satisfy beta > 0).
+    Attributes:
+    ----------
+    alpha : float
+        The first shape parameter (must satisfy  alpha > 0).
+    beta : float
+        The second shape parameter (must satisfy beta > 0).
 
-        Returns:
-        -------
-        sigma_opt_squared : float
-            The computed optimal variance proxy (initialized after computation).
-            
-        lambda_star : float
-            The optimal λ maximizing h(λ).
+    Returns:
+    -------
+    sigma_opt_squared : float
+        The computed optimal variance proxy (initialized after computation).
         
-        """
-
-        def __init__(self, alpha: float, beta: float):
-            if alpha <= 0 or beta <= 0:
-                raise ValueError("Parameters must be positive")
-            self.alpha = float(alpha)
-            self.beta = float(beta)
-
-            # E[X^r] = beta * B(1 + r/alpha, beta)
-            self.mu = self._EX_pow_r(1.0)
-            ex2 = self._EX_pow_r(2.0)
-            self.var = ex2 - self.mu**2
-
-            self.sigma_opt_squared = None
-            self.lambda_star = None
-
-
-            self.bounds_list = [2, 5, 10, 20, 50, 100]
-            self.bracket_scales = [1, 2, 5, 10, 20, 40]
-
-        def _EX_pow_r(self, r: float) -> float:
-            # E[X^r] = beta * B(1 + r/alpha, beta)  (stable via logs)
-            return np.exp(np.log(self.beta) + betaln(1.0 + r / self.alpha, self.beta))
-
-        
-        
-        def _E_exp_lambda_X(self, lam: float, tol: float = 1e-12, max_terms: int = 100000) -> float:
-
-            if np.isclose(self.alpha, 1.0):
-                return float(hyp1f1(1.0, self.beta + 1.0, lam))
-
-            a = self.alpha
-            b = self.beta
-
-            log_gamma_beta1 = gammaln(b + 1.0)
+    lambda_star : float
+        The optimal λ maximizing h(λ).
     
-            total = 0.0
-            k = 0
-            # term_k = exp(log Γ(β+1) + log Γ(1+k/α) - log Γ(β+1+k/α) + k*log|lam| - log(k!))
-            log_abs_lam = np.log(abs(lam)) if lam != 0.0 else -np.inf
-            log_fact = 0.0  # cumul  log(k!) 
+    """
 
-            prev_total = None
-            while k < max_terms:
-                if k > 0:
-                    log_fact += np.log(k)
+    def __init__(self, alpha: float, beta: float):
+        if alpha <= 0 or beta <= 0:
+            raise ValueError("Parameters must be positive")
+        self.alpha = float(alpha)
+        self.beta = float(beta)
 
-                log_num = log_gamma_beta1 + gammaln(1.0 + k / a)
-                log_den = gammaln(b + 1.0 + k / a) + log_fact
-                if lam == 0.0 and k > 0:
-                    break
-                log_term = log_num - log_den + (0.0 if lam == 0.0 else k * log_abs_lam)
+        # E[X^r] = beta * B(1 + r/alpha, beta)
+        self.mu = self._EX_pow_r(1.0)
+        ex2 = self._EX_pow_r(2.0)
+        self.var = ex2 - self.mu**2
 
-                term = np.exp(log_term)
-                if lam < 0.0 and (k % 2 == 1):
-                    term = -term
+        self.sigma_opt_squared = None
+        self.lambda_star = None
 
-                new_total = total + term
 
-                if total != 0.0 and abs(term) <= tol * abs(new_total):
-                    total = new_total
-                    break
+        self.bounds_list = [2, 5, 10, 20, 50, 100]
+        self.bracket_scales = [1, 2, 5, 10, 20, 40]
 
-                if prev_total is not None and abs(new_total - prev_total) <= max(tol * abs(new_total), 1e-18):
-                    total = new_total
-                    break
+    def _EX_pow_r(self, r: float) -> float:
+        # E[X^r] = beta * B(1 + r/alpha, beta)  (stable via logs)
+        return np.exp(np.log(self.beta) + betaln(1.0 + r / self.alpha, self.beta))
 
-                prev_total = total
+    
+    
+    def _E_exp_lambda_X(self, lam: float, tol: float = 1e-12, max_terms: int = 100000) -> float:
+
+        if np.isclose(self.alpha, 1.0):
+            return float(hyp1f1(1.0, self.beta + 1.0, lam))
+
+        a = self.alpha
+        b = self.beta
+
+        log_gamma_beta1 = gammaln(b + 1.0)
+
+        total = 0.0
+        k = 0
+        # term_k = exp(log Γ(β+1) + log Γ(1+k/α) - log Γ(β+1+k/α) + k*log|lam| - log(k!))
+        log_abs_lam = np.log(abs(lam)) if lam != 0.0 else -np.inf
+        log_fact = 0.0  # cumul  log(k!) 
+
+        prev_total = None
+        while k < max_terms:
+            if k > 0:
+                log_fact += np.log(k)
+
+            log_num = log_gamma_beta1 + gammaln(1.0 + k / a)
+            log_den = gammaln(b + 1.0 + k / a) + log_fact
+            if lam == 0.0 and k > 0:
+                break
+            log_term = log_num - log_den + (0.0 if lam == 0.0 else k * log_abs_lam)
+
+            term = np.exp(log_term)
+            if lam < 0.0 and (k % 2 == 1):
+                term = -term
+
+            new_total = total + term
+
+            if total != 0.0 and abs(term) <= tol * abs(new_total):
                 total = new_total
-                k += 1
+                break
 
-            return total if np.isfinite(total) else np.nan
-        
+            if prev_total is not None and abs(new_total - prev_total) <= max(tol * abs(new_total), 1e-18):
+                total = new_total
+                break
 
-        def h_kumar(self, lam: float) -> float:
-            """Compute h(λ) with safe fallbacks."""
-            if abs(lam) < 1e-14:
-                return self.var
+            prev_total = total
+            total = new_total
+            k += 1
 
-            Ee_lamX = self._E_exp_lambda_X(lam)
-            if not np.isfinite(Ee_lamX) or Ee_lamX <= 0.0:
-                return -np.inf
+        return total if np.isfinite(total) else np.nan
+    
 
+    def h_kumar(self, lam: float) -> float:
+        """Compute h(λ) with safe fallbacks."""
+        if abs(lam) < 1e-14:
+            return self.var
 
-            log_mgf_centered = -lam * self.mu + np.log(Ee_lamX)
-            result = (2.0 / (lam * lam)) * log_mgf_centered
-            return result if np.isfinite(result) else -np.inf
-
-        def subgaussian_optimal_variance_proxy(self):
-            """
-            Adaptive search for σ²_opt = max_λ h(λ) with X ~ Kumaraswamy(α, β).
-            Returns (sigma_opt_squared, lambda_star).
-            """
-
-            if np.isclose(self.alpha, 1.0) and np.isclose(self.beta, 1.0):
-                self.sigma_opt_squared = self.var
-                self.lambda_star = 0.0
-                return self.sigma_opt_squared, self.lambda_star
+        Ee_lamX = self._E_exp_lambda_X(lam)
+        if not np.isfinite(Ee_lamX) or Ee_lamX <= 0.0:
+            return -np.inf
 
 
-            best_val = self.var
-            best_lam = 0.0
+        log_mgf_centered = -lam * self.mu + np.log(Ee_lamX)
+        result = (2.0 / (lam * lam)) * log_mgf_centered
+        return result if np.isfinite(result) else -np.inf
 
+    def subgaussian_optimal_variance_proxy(self):
+        """
+        Adaptive search for σ²_opt = max_λ h(λ) with X ~ Kumaraswamy(α, β).
+        Returns (sigma_opt_squared, lambda_star).
+        """
 
-            for scale in self.bracket_scales:
-                try:
-                    bracket = (-scale, 0.0, scale)
-                    res = minimize_scalar(lambda lam: -self.h_kumar(lam), bracket=bracket, method='brent')
-                    if res.success and np.isfinite(res.fun):
-                        val = -res.fun
-                        lam_star = float(res.x)
-                        if val > best_val:
-                            best_val, best_lam = val, lam_star
-                            if best_val >= self.var * 0.999:
-                                self.sigma_opt_squared = best_val
-                                self.lambda_star = best_lam
-                                return self.sigma_opt_squared, self.lambda_star
-                except Exception:
-                    continue
-
-
-            for bound in self.bounds_list:
-                try:
-                    res = minimize_scalar(lambda lam: -self.h_kumar(lam),
-                                        bounds=(-bound, bound), method='bounded',
-                                        options={"xatol": 1e-4})
-                    if res.success and np.isfinite(res.fun):
-                        val = -res.fun
-                        lam_star = float(res.x)
-                        if val > best_val:
-                            best_val, best_lam = val, lam_star
-                            if abs(lam_star) < 0.9 * bound:
-                                break
-                except Exception:
-                    continue
-
-            self.sigma_opt_squared = best_val
-            self.lambda_star = best_lam
+        if np.isclose(self.alpha, 1.0) and np.isclose(self.beta, 1.0):
+            self.sigma_opt_squared = self.var
+            self.lambda_star = 0.0
             return self.sigma_opt_squared, self.lambda_star
 
 
-        def plot_objective_function(self, n_points: int = 50000):
-            """
-            Plot h(λ) and indicate the maximizer.
-            """
-            sigma_opt_squared, lam_star = self.subgaussian_optimal_variance_proxy()
-            width = 1.0 if lam_star == 0 else max(1.0, 0.5 * (1.0 + abs(lam_star)))
-            lam_vals = np.linspace(lam_star - width, lam_star + width, n_points)
-            h_vals = [self.h_kumar(l) for l in lam_vals]
+        best_val = self.var
+        best_lam = 0.0
 
-            plt.figure(figsize=(8, 5))
-            plt.plot(lam_vals, h_vals, label="h(λ)")
-            plt.axvline(lam_star, color="red", ls="--", lw=1.2, label=f"λ*={lam_star:.3g}")
-            if np.isfinite(lam_star) and np.isfinite(sigma_opt_squared):
-                plt.scatter([lam_star], [sigma_opt_squared], zorder=5, 
-                            label=fr"$\max_\lambda h = {sigma_opt_squared:.4g}$ at $\lambda^*={lam_star:.3g}$")
-                
-            plt.xlabel("λ")
-            plt.ylabel("h(λ)")
-            plt.title(f"h(λ) for Kumaraswamy(α={self.alpha}, β={self.beta})")
-            plt.legend(loc="best")
-            plt.grid(True)
-            plt.show()
+
+        for scale in self.bracket_scales:
+            try:
+                bracket = (-scale, 0.0, scale)
+                res = minimize_scalar(lambda lam: -self.h_kumar(lam), bracket=bracket, method='brent')
+                if res.success and np.isfinite(res.fun):
+                    val = -res.fun
+                    lam_star = float(res.x)
+                    if val > best_val:
+                        best_val, best_lam = val, lam_star
+                        if best_val >= self.var * 0.999:
+                            self.sigma_opt_squared = best_val
+                            self.lambda_star = best_lam
+                            return self.sigma_opt_squared, self.lambda_star
+            except Exception:
+                continue
+
+
+        for bound in self.bounds_list:
+            try:
+                res = minimize_scalar(lambda lam: -self.h_kumar(lam),
+                                    bounds=(-bound, bound), method='bounded',
+                                    options={"xatol": 1e-4})
+                if res.success and np.isfinite(res.fun):
+                    val = -res.fun
+                    lam_star = float(res.x)
+                    if val > best_val:
+                        best_val, best_lam = val, lam_star
+                        if abs(lam_star) < 0.9 * bound:
+                            break
+            except Exception:
+                continue
+
+        self.sigma_opt_squared = best_val
+        self.lambda_star = best_lam
+        return self.sigma_opt_squared, self.lambda_star
+
+
+    def plot_objective_function(self, n_points: int = 50000):
+        """
+        Plot h(λ) and indicate the maximizer.
+        """
+        sigma_opt_squared, lam_star = self.subgaussian_optimal_variance_proxy()
+        width = 1.0 if lam_star == 0 else max(1.0, 0.5 * (1.0 + abs(lam_star)))
+        lam_vals = np.linspace(lam_star - width, lam_star + width, n_points)
+        h_vals = [self.h_kumar(l) for l in lam_vals]
+
+        plt.figure(figsize=(8, 5))
+        plt.plot(lam_vals, h_vals, label="h(λ)")
+        plt.axvline(lam_star, color="red", ls="--", lw=1.2, label=f"λ*={lam_star:.3g}")
+        if np.isfinite(lam_star) and np.isfinite(sigma_opt_squared):
+            plt.scatter([lam_star], [sigma_opt_squared], zorder=5, 
+                        label=fr"$\max_\lambda h = {sigma_opt_squared:.4g}$ at $\lambda^*={lam_star:.3g}$")
+            
+        plt.xlabel("λ")
+        plt.ylabel("h(λ)")
+        plt.title(f"h(λ) for Kumaraswamy(α={self.alpha}, β={self.beta})")
+        plt.legend(loc="best")
+        plt.grid(True)
+        plt.show()
