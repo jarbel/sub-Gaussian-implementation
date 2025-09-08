@@ -6,7 +6,7 @@ or
 VS code debugger (launch json config)
 """
 from scipy.optimize import root_scalar
-from src.variance_proxy import * 
+from src.variance_proxy import SubGaussian3MassAsymmetricProxy, SubGaussian3MassSymmetricProxy, subgaussian_proxy_variance_bernoulli, SubGaussianBetaProxy
 import matplotlib.pyplot as plt 
 import numpy as np
 
@@ -127,20 +127,20 @@ if test_3mass_sym_and_assym:
 
     #################################################### Compare Symmetric and Asymmetric implementations ####################################################
     p_values = np.linspace(0.0001, 1/6 - 0.0001, 500)  # p < 1/6
-    proxy_variances_ass = []
-    proxy_variances_s = []
+    proxy_variances_asym = []
+    proxy_variances_sym = []
     for p in p_values:
-        objAss = SubGaussian3MassAsymmetricProxy(p1=p, p2=p, a=1)
-        sigma2_opt_ass, _ = objAss.subgaussian_optimal_variance_proxy()
-        proxy_variances_ass.append(sigma2_opt_ass)
+        objAsym = SubGaussian3MassAsymmetricProxy(p1=p, p2=p, a=1)
+        sigma2_opt_asym, _ = objAsym.subgaussian_optimal_variance_proxy()
+        proxy_variances_asym.append(sigma2_opt_asym)
         
-        objS = SubGaussian3MassSymmetricProxy(p)
-        sigma_opt_squared, _ = objS.subgaussian_optimal_variance_proxy()
-        proxy_variances_s.append(sigma_opt_squared)
-        
+        objSym = SubGaussian3MassSymmetricProxy(p)
+        sigma_opt_squared, _ = objSym.subgaussian_optimal_variance_proxy()
+        proxy_variances_sym.append(sigma_opt_squared)
+
     plt.figure(figsize=(8, 6))
-    plt.plot(p_values, proxy_variances_s, label="symmetric", linestyle='dashed', linewidth=2)
-    plt.plot(p_values, proxy_variances_ass, label="asymmetric")
+    plt.plot(p_values, proxy_variances_sym, label="symmetric", linestyle='dashed', linewidth=2)
+    plt.plot(p_values, proxy_variances_asym, label="asymmetric")
     plt.title('Equivalence Check: Optimal Proxy Variance — Symmetric vs. Asymmetric Implementations')
     plt.xlabel('Probability (p<1/6)')
     plt.ylabel('Optimal proxy variance')

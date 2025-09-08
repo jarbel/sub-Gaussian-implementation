@@ -9,7 +9,6 @@ import warnings
 import math
 
 
-
 def subgaussian_proxy_variance_bernoulli(p: float) -> float:
     """
     Compute the optimal sub-Gaussian  variance proxy for a Bernoulli(p) distribution.
@@ -106,7 +105,7 @@ def subgaussian_proxy_variance_sum_independent_uniform(segments: tuple) -> float
     
     return total_sigma2_opt
 
-def subgaussian_discrete_uniforme_variance_proxy(a: float, n: int) -> float:
+def subgaussian_discrete_uniform_variance_proxy(a: float, n: int) -> float:
     """
     Variance proxy  for a discrete uniform with equally spaced support:
 
@@ -243,8 +242,9 @@ class SubGaussianTriangularProxy:
     interval_search_bound: float = 200.0
     n_lambda_grid: int = 4001
     lambda_threshold_taylor: float = 1e-3
+    lambda_search_bound: float = 1e-3
     precision: float = 1e-10
-    max_passes: int = 3
+    max_passes: int = 4
     enforce_nonneg_delta: bool = True
 
     def __post_init__(self) -> None:
@@ -330,9 +330,8 @@ class SubGaussianTriangularProxy:
         return dE - dM
 
     def _roots_for_sigma(self, sigma2: float) -> List[float]:
-        lambda_search_bound = 1e-3
-        for _ in range(4):
-            L_scan = min(lambda_search_bound, self.lambda_max)
+        for _ in range(self.max_passes):
+            L_scan = min(self.lambda_search_bound, self.lambda_max)
             xs = np.linspace(-L_scan, L_scan, self.n_lambda_grid, dtype=float)
             vals = np.array([self._delta(sigma2, float(x)) for x in xs], dtype=float)
             roots: set[float] = set()
@@ -353,10 +352,10 @@ class SubGaussianTriangularProxy:
                     continue
             if roots:
                 return sorted(roots)
-            new_L = min(lambda_search_bound * 2, self.lambda_max)
-            if new_L <= lambda_search_bound * (1.0 + self.precision):
+            new_L = min(self.lambda_search_bound * 2, self.lambda_max)
+            if new_L <= self.lambda_search_bound * (1.0 + self.precision):
                 break
-            lambda_search_bound = new_L
+            self.lambda_search_bound = new_L
         return []
 
     def _search_optimal_sigma2_lambda_on_grid(self, sigmas: np.ndarray) -> Dict[str, Any]:
@@ -737,9 +736,6 @@ class SubGaussian3MassAsymmetricProxy:
             print(f"There is a closed form for (p1, p2) = ({self.p1}, {self.p2}), no plot to display.")
             return  
         
-        lambdas = np.linspace(self.lambda_star - 1, self.lambda_star + 1 , n_points)
-        equations = [self._equation(lam) for lam in lambdas]
-
         lambdas = np.linspace(self.lambda_star - 1, self.lambda_star + 1 , n_points)
         equations = [self._equation(lam) for lam in lambdas]
 
