@@ -28,7 +28,7 @@ pip install -r requirements.txt
 Import the relevant functions or classes from `variance_proxy.py`:
 
 ```python
-from source.variance_proxy import (
+from src.variance_proxy import (
     subgaussian_proxy_variance_bernoulli,
     subgaussian_proxy_variance_binomial,
     subgaussian_proxy_variance_uniform,
@@ -62,6 +62,7 @@ print(f"Optimal proxy variance: {sigma_opt_squared}")
 - **subgaussian_proxy_variance_sum_independant_uniform(segments)**: Proxy for sum of independent uniforms.
 - **subgaussian_discrete_uniforme_variance_proxy(a, n)**: Proxy for discrete uniform.
 - **subgaussian_proxy_variance_truncated_normal(a, b, mu, sigma2)**: Proxy for truncated normal.
+- **Subgaussian_proxy_variance_truncated_exponential(a, b, lam)**: Proxy for truncated exponential.
 - **SubGaussianTriangularProxy(a, b)**: Class for triangular distribution.
 - **SubGaussian3MassSymetricProxy(p, a)**: Class for symmetric 3-mass distribution.
 - **SubGaussian3MassAssymetricProxy(p1, p2, a)**: Class for asymmetric 3-mass distribution.
