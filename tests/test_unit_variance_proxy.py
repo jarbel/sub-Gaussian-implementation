@@ -56,7 +56,7 @@ def test_3mass_symmetric_proxy():
     sigma2, lam = obj.subgaussian_optimal_variance_proxy()
     assert sigma2 > 0
 
-def test_3mass_assymetric_proxy():
+def test_3mass_asymmetric_proxy():
     obj = SubGaussian3MassAsymmetricProxy(0.1, 0.2, 1)
     sigma2, lam = obj.subgaussian_optimal_variance_proxy()
     assert sigma2 > 0

@@ -15,7 +15,7 @@ check_asymmetric_symmetric_implementation = True
 replicate_paper_beta_bernoulli_figs = False
 test_3mass_sym_and_assym = False
 
-if check_assymetric_symmetric_implementation:
+if check_asymmetric_symmetric_implementation:
 
     p_values = np.linspace(0.0001, 1/6 - 0.0001, 3000)
     proxy_variances_ass = []
@@ -140,7 +140,7 @@ if test_3mass_sym_and_assym:
         
     plt.figure(figsize=(8, 6))
     plt.plot(p_values, proxy_variances_s, label="symmetric", linestyle='dashed', linewidth=2)
-    plt.plot(p_values, proxy_variances_ass, label="assymmetric")
+    plt.plot(p_values, proxy_variances_ass, label="asymmetric")
     plt.title('Equivalence Check: Optimal Proxy Variance — Symmetric vs. Asymmetric Implementations')
     plt.xlabel('Probability (p<1/6)')
     plt.ylabel('Optimal proxy variance')
@@ -174,7 +174,7 @@ if test_3mass_sym_and_assym:
     plt.grid(True)
     plt.show()
 
-    #################################################### Exhaustive test for assymetric implementation ####################################################
+    #################################################### Exhaustive test for asymmetric implementation ####################################################
 
     # success rate 1.0, total pairs 996004, fail 0
     s = 0
