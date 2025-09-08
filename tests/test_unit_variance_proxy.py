@@ -15,8 +15,8 @@ from src.variance_proxy import (
     subgaussian_proxy_variance_binomial,
     subgaussian_proxy_variance_uniform,
     SubGaussianTriangularProxy,
-    SubGaussian3MassSymetricProxy,
-    SubGaussian3MassAssymetricProxy,
+    SubGaussian3MassSymmetricProxy,
+    SubGaussian3MassAsymmetricProxy,
     SubGaussianBetaProxy,
 )
 
@@ -52,12 +52,12 @@ def test_triangular_symmetry():
     assert np.isclose(result["lambda_opt"], 0.0)
 
 def test_3mass_symmetric_proxy():
-    obj = SubGaussian3MassSymetricProxy(0.1)
+    obj = SubGaussian3MassSymmetricProxy(0.1)
     sigma2, lam = obj.subgaussian_optimal_variance_proxy()
     assert sigma2 > 0
 
 def test_3mass_assymetric_proxy():
-    obj = SubGaussian3MassAssymetricProxy(0.1, 0.2, 1)
+    obj = SubGaussian3MassAsymmetricProxy(0.1, 0.2, 1)
     sigma2, lam = obj.subgaussian_optimal_variance_proxy()
     assert sigma2 > 0
 

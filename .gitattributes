@@ -1,0 +1,8 @@
+*.tex linguist-detectable=false
+*.bib linguist-detectable=false
+*.bst linguist-detectable=false
+*.png linguist-detectable=false
+
+
+*.py linguist-language=Python
+
