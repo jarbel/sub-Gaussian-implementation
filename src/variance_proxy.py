@@ -546,7 +546,7 @@ class SubGaussian3MassSymmetricProxy:
 
 class SubGaussian3MassAsymmetricProxy:
     """
-    Class for computing the optimal sub-Gaussian variance proxy for assymetric 3-mass distribution on {-a, 0, +a}
+    Class for computing the optimal sub-Gaussian variance proxy for asymmetric 3-mass distribution on {-a, 0, +a}
     with probabilities: p1 at -a, p3=1-p1-p2 at 0, p2 at +a.
     
     Attributes:
