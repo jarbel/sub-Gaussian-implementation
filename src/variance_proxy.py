@@ -203,7 +203,7 @@ def subgaussian_proxy_variance_truncated_exponential(a: float, b: float, lam: fl
 
 
 @dataclass
-class SubGaussianTriangularDistribution:
+class SubGaussianTriangularProxy:
     """
     Class to compute the optimal sub-Gaussian variance proxy
     for a triangular distribution on (-a, b).
@@ -237,11 +237,10 @@ class SubGaussianTriangularDistribution:
  
     a: float
     b: float
-    
     n_sigma_refine: int = 40
     lambda_max: float = 100.0
     max_iter: int = 200
-    interval_search_bound: int = 200
+    interval_search_bound: float = 200.0
     n_lambda_grid: int = 4001
     lambda_threshold_taylor: float = 1e-3
     precision: float = 1e-10
@@ -253,10 +252,23 @@ class SubGaussianTriangularDistribution:
             raise ValueError("Parameters a and b must be positive.")
         self.variance = (self.a**2 + self.a*self.b + self.b**2) / 18.0
         self.upper = ((self.a + self.b) ** 2) / 4.0
+        # cap for exponent to avoid overflow
         self.lambda_exponent_cap = float(np.log(np.finfo(float).max))
+        c1 = (self.a + 2 * self.b) / 3.0
+        c2 = (self.b + 2 * self.a) / 3.0
+        c3 = abs(self.a - self.b) / 3.0
+        max_c = max(abs(c1), abs(c2), abs(c3))
+        # Safe λ bound: ensure |λ|max * max_c <= log(max_float)
+        if max_c > 0:
+            lam_safe = self.lambda_exponent_cap / max_c
+        else:
+            lam_safe = self.lambda_exponent_cap
+            
+        self.interval_search_bound = min(self.interval_search_bound, lam_safe)
+        self.lambda_max = min(self.lambda_max, lam_safe)
 
+    # Internal helper functions
     def _exponential_term(self, sigma2: float, lam: float) -> float:
-        """Compute e^{0.5λ²σ²} with overflow protection."""
         x = 0.5 * lam * lam * sigma2
         if x > self.lambda_exponent_cap:
             return float('inf')
@@ -265,62 +277,59 @@ class SubGaussianTriangularDistribution:
         return math.exp(x)
 
     def _central_moments(self) -> Tuple[float, float, float]:
-        """Return the 2nd, 3rd, and 4th central moments of the centered triangular law."""
         a, b = self.a, self.b
         mu2 = self.variance
-        mu3 = (b - a) * (2*a + b) * (2*b + a) / 270.0
-        mu4 = (a*a + a*b + b*b) ** 2 / 135.0
+        mu3 = (b - a) * (2 * a + b) * (2 * b + a) / 270.0
+        mu4 = (a * a + a * b + b * b) ** 2 / 135.0
         return mu2, mu3, mu4
 
     def _mgf_centered_series(self, lam: float) -> Tuple[float, float]:
-        """Taylor expansion of the centered MGF and its derivative for small |λ|."""
         mu2, mu3, mu4 = self._central_moments()
         l2 = lam * lam
-        M  = 1.0 + 0.5 * mu2 * l2 + (mu3 * lam * l2) / 6.0 + (mu4 * l2 * l2) / 24.0
+        M = 1.0 + 0.5 * mu2 * l2 + (mu3 * lam * l2) / 6.0 + (mu4 * l2 * l2) / 24.0
         M1 = mu2 * lam + 0.5 * mu3 * l2 + (mu4 / 6.0) * lam * l2
         return M, M1
 
     def _mgf_centred_closed(self, lam: float) -> Tuple[float, float]:
-        """Centered MGF and derivative in closed form, numerically stable."""
-        c1 = (self.a + 2*self.b) / 3.0
-        c2 = -(self.b + 2*self.a) / 3.0
+        # coefficients c1, c2, c3 following the closed form derivation
+        c1 = (self.a + 2 * self.b) / 3.0
+        c2 = -(self.b + 2 * self.a) / 3.0
         c3 = (self.a - self.b) / 3.0
         e1 = lam * c1
         e2 = lam * c2
         e3 = lam * c3
         m = max(e1, e2, e3)
+        # compute exponentials of shifted exponents; safe values in [0,1]
         E1 = math.exp(e1 - m)
         E2 = math.exp(e2 - m)
         E3 = math.exp(e3 - m)
-        B  = (self.a * E1 + self.b * E2 - (self.a + self.b) * E3) * math.exp(m)
-        B1 = (self.a * c1 * E1 + self.b * c2 * E2 - (self.a + self.b) * c3 * E3) * math.exp(m)
-        lam2 = lam * lam
+        # base combination B and B1 multiplied by exp(m)
         denom = self.a * self.b * (self.a + self.b)
-        M  = (2.0 / denom) * (B  / lam2)
+        lam2 = lam * lam
+        if m > self.lambda_exponent_cap:
+            return float('inf'), float('inf')
+        B = (self.a * E1 + self.b * E2 - (self.a + self.b) * E3) * math.exp(m)
+        B1 = (self.a * c1 * E1 + self.b * c2 * E2 - (self.a + self.b) * c3 * E3) * math.exp(m)
+        M = (2.0 / denom) * (B / lam2)
         dM = (2.0 / denom) * (B1 / lam2 - 2.0 * B / (lam2 * lam))
         return M, dM
 
     def _mgf_and_derivative(self, lam: float) -> Tuple[float, float]:
-        """Selects the most stable method to compute the centered MGF and its derivative."""
-        if abs(lam) < self.lambda_threshold_taylor :
+        if abs(lam) < self.lambda_threshold_taylor:
             return self._mgf_centered_series(lam)
         return self._mgf_centred_closed(lam)
 
     def _delta(self, sigma2: float, lam: float) -> float:
-        """Δ(σ², λ) = e^{0.5λ²σ²} - centered_MGF(λ)"""
-        return self._exponential_term(sigma2, lam) - self._mgf_and_derivative(lam)[0]
+        mgf, _ = self._mgf_and_derivative(lam)
+        exp_term = self._exponential_term(sigma2, lam)
+        return exp_term - mgf
 
     def _delta_prime(self, sigma2: float, lam: float) -> float:
-        """dΔ/dλ = λσ² e^{0.5λ²σ²} - centered_MGF'(λ)"""
+        _, dM = self._mgf_and_derivative(lam)
         dE = lam * sigma2 * self._exponential_term(sigma2, lam)
-        dM = self._mgf_and_derivative(lam)[1]
         return dE - dM
 
     def _roots_for_sigma(self, sigma2: float) -> List[float]:
-        """
-        Search all roots λ of Δ(σ², λ) = 0 on [-L, L] (L increasing up to lambda_max).
-        Returns the sorted list of found roots.
-        """
         lambda_search_bound = 1e-3
         for _ in range(4):
             L_scan = min(lambda_search_bound, self.lambda_max)
@@ -336,7 +345,7 @@ class SubGaussianTriangularDistribution:
                     continue
                 if np.sign(y1) == np.sign(y2):
                     continue
-                a, b = xs[i], xs[i+1]
+                a, b = xs[i], xs[i + 1]
                 try:
                     r = brentq(lambda t: self._delta(sigma2, t), a, b, xtol=self.precision, maxiter=self.max_iter)
                     roots.add(r)
@@ -351,11 +360,6 @@ class SubGaussianTriangularDistribution:
         return []
 
     def _search_optimal_sigma2_lambda_on_grid(self, sigmas: np.ndarray) -> Dict[str, Any]:
-        """
-        Loops over a grid of σ² and, for each σ², searches for roots λ of Δ(σ², λ) = 0.
-        Retains the pair (σ², λ) that minimizes |Δ′(σ², λ)|, with the optional constraint
-        that Δ(σ², λ) ≥ 0 over the entire λ interval.
-        """
         best = {"sigma2": None, "lambda": None, "abs_dprime": float("inf"), "min_delta": None}
         for sigma_opt_squared in sigmas:
             roots = self._roots_for_sigma(sigma_opt_squared)
@@ -374,68 +378,58 @@ class SubGaussianTriangularDistribution:
         return best
 
     def subgaussian_optimal_variance_proxy(self) -> Dict[str, Any]:
-        """
-        Searches for the optimal sub-Gaussian variance proxy for the triangular law.
-        Returns a dictionary with optimal σ², optimal λ, and diagnostic info.
-        """
         if abs(self.a - self.b) <= self.precision:
             return {
                 "sigma_opt_squared": self.variance,
                 "lambda_opt": 0.0,
                 "ok": True,
                 "checks": {"delta": 0.0, "delta_prime": 0.0},
-                "note": "symmetric distribution → σ²=V[X], λ=0"
+                "note": "symmetric distribution → σ²=V[X], λ=0",
             }
         low, high = self.variance, self.upper
-        sigmas = np.linspace(low, high, self.interval_search_bound)
+        sigmas = np.linspace(low, high, int(self.interval_search_bound))
         candidate = self._search_optimal_sigma2_lambda_on_grid(sigmas)
-        if candidate["sigma_opt_squared"] is None:
+        if candidate.get("sigma_opt_squared") is None:
             return {"ok": False, "reason": "no root of Δ found on coarse grid"}
         for _ in range(self.max_passes):
             sigma_opt_squared, lam = float(candidate["sigma_opt_squared"]), float(candidate["lambda"])
             dval = abs(self._delta(sigma_opt_squared, lam))
-            dpr  = abs(self._delta_prime(sigma_opt_squared, lam))
+            dpr = abs(self._delta_prime(sigma_opt_squared, lam))
             if dval <= self.precision and dpr <= self.precision:
                 return {
                     "sigma_opt_squared": sigma_opt_squared,
                     "lambda_opt": lam,
                     "ok": True,
-                    "checks": {"delta": dval, "delta_prime": dpr}
+                    "checks": {"delta": dval, "delta_prime": dpr},
                 }
             span = max((high - low) / self.n_sigma_refine, 1e-6 * max(1.0, high))
-            s_low  = max(low,  sigma_opt_squared - 2.0 * span)
+            s_low = max(low, sigma_opt_squared - 2.0 * span)
             s_high = min(high, sigma_opt_squared + 2.0 * span)
             sigmas_ref = np.linspace(s_low, s_high, self.n_sigma_refine)
             candidate = self._search_optimal_sigma2_lambda_on_grid(sigmas_ref)
-            if candidate["sigma_opt_squared"] is None:
+            if candidate.get("sigma_opt_squared") is None:
                 break
-        sigma_opt_squared, lam = float(candidate["sigma_opt_squared"]), float(candidate["lambda"])
+        sigma_opt_squared, lam = float(candidate.get("sigma_opt_squared")), float(candidate.get("lambda"))
         return {
             "sigma_opt_squared": sigma_opt_squared,
             "lambda_opt": lam,
             "ok": False,
             "checks": {
                 "delta": abs(self._delta(sigma_opt_squared, lam)),
-                "delta_prime": abs(self._delta_prime(sigma_opt_squared, lam))
+                "delta_prime": abs(self._delta_prime(sigma_opt_squared, lam)),
             },
         }
 
-    def plot_objective_function(self, sigma2=None, lam=None, window=2.0, n_points=500):
-        """
-        Plot Delta(σ², λ) and its derivative dDelta/dλ as functions of λ around the optimal point.
-        If sigma2 and lam are not provided, uses the optimal values from subgaussian_optimal_variance_proxy().
-        """
+    def plot_objective_function(self, sigma2=None, lam=None, window=2.0, n_points=500) -> None:
         if sigma2 is None or lam is None:
             result = self.subgaussian_optimal_variance_proxy()
-            sigma2 = result.get("sigma_opt_squared", None)
-            lam = result.get("lambda_opt", None)
+            sigma2 = result.get("sigma_opt_squared")
+            lam = result.get("lambda_opt")
             if sigma2 is None or lam is None:
                 raise ValueError("Could not determine optimal sigma2 and lambda for plotting.")
-
         lam_range = np.linspace(lam - window, lam + window, n_points)
         delta_vals = np.array([self._delta(sigma2, l) for l in lam_range])
         delta_prime_vals = np.array([self._delta_prime(sigma2, l) for l in lam_range])
-
         plt.figure(figsize=(10, 6))
         plt.plot(lam_range, delta_vals, label=r"$\Delta(\sigma^2, \lambda)$", color="blue")
         plt.plot(lam_range, delta_prime_vals, label=r"$d\Delta/d\lambda$", color="orange")

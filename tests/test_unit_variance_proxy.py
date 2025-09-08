@@ -1,7 +1,7 @@
 """
 How to run these tests:
 -----------------------
->> pytest tests/test_unit_variance_proxy.py
+>> python -m pytest -v
 or 
 VS code debugger (launch json config)
 
@@ -14,7 +14,7 @@ from src.variance_proxy import (
     subgaussian_proxy_variance_bernoulli,
     subgaussian_proxy_variance_binomial,
     subgaussian_proxy_variance_uniform,
-    TriangularDistribution,
+    SubGaussianTriangularProxy,
     SubGaussian3MassSymetricProxy,
     SubGaussian3MassAssymetricProxy,
     SubGaussianBetaProxy,
@@ -41,12 +41,12 @@ def test_uniform_proxy():
         subgaussian_proxy_variance_uniform(2, 1)
 
 def test_triangular_variance_bounds():
-    tri = TriangularDistribution(1, 2)
+    tri = SubGaussianTriangularProxy(1, 2)
     result = tri.subgaussian_optimal_variance_proxy()
     assert tri.variance <= result["sigma_opt_squared"] <= tri.upper
 
 def test_triangular_symmetry():
-    tri = TriangularDistribution(2, 2)
+    tri = SubGaussianTriangularProxy(2, 2)
     result = tri.subgaussian_optimal_variance_proxy()
     assert np.isclose(result["sigma_opt_squared"], tri.variance)
     assert np.isclose(result["lambda_opt"], 0.0)
