@@ -3,7 +3,10 @@
 
 # Sub-Gaussian Proxy Variance Library
 
-This library provides tools to compute the **optimal sub-Gaussian variance proxy** for a variety of discrete and continuous probability distributions. It implements advanced algorithms for strict sub-Gaussianity, optimal proxy variance, and related properties, as described in recent probability literature.
+This library provides tools to compute the **optimal sub-Gaussian variance proxy** for a variety of discrete and continuous probability distributions. It implements advanced algorithms for strict sub-Gaussianity, optimal proxy variance, and related properties, as described in recent probability literature. It is based on the article:
+
+- Atouani, S., Marchal, O., & Arbel, J. (2025+). *Characterisation and implementation of optimal sub-Gaussian variance proxy with applications to discrete distributions*.  
+  *arXiv preprint*: TBC
 
 ## Features
 
