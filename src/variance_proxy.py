@@ -36,7 +36,7 @@ def subgaussian_proxy_variance_binomial(n: int, p: float) -> float:
     """
     Compute the optimal sub-Gaussian variance proxy  for a Binomial(n,p) distribution.
     For S = sum_{i=1}^n X_i with X_i i.i.d. Bernoulli(p),
-    the optimal variances proxy  add: sigma_opt^2(S) = n * sigma_opt^2(Bernoulli(p)).
+    the optimal variance proxies add: sigma_opt^2(S) = n * sigma_opt^2(Bernoulli(p)).
     
     Parameters:
     ----------
@@ -76,7 +76,7 @@ def subgaussian_proxy_variance_uniform(a: float, b: float) -> float:
     """
 
     if a >= b:
-        raise ValueError("b must be greater than a" )
+        raise ValueError("b must be greater than a")
 
     return 1/12 * (b-a)**2
 
@@ -89,7 +89,7 @@ def subgaussian_proxy_variance_sum_independent_uniform(segments: tuple) -> float
               but not necessarily identically distributed
               
     Returns: 
-    total mean, variance, and sub-Gaussian variance proxy of the sum
+    sub-Gaussian variance proxy of the sum
     """
     if not segments or not all(isinstance(seg, tuple) and len(seg) == 2 for seg in segments):
         raise ValueError("segments must be a non-empty list of tuples (a, b).")
@@ -466,8 +466,8 @@ class SubGaussian3MassSymmetricProxy:
     """
 
     def __init__(self, p: float, a: float = 1):
-        if not 0 < p <= 1/2:
-            raise ValueError("p must be in (0,0.5].")
+        if not 0 < p < 1/2:
+            raise ValueError("p must be in (0,0.5) (exclusive)")
         self.p = p
         self.a = a
         self.sigma_opt_squared = None 
@@ -522,7 +522,11 @@ class SubGaussian3MassSymmetricProxy:
             print("There is a closed form solution for p >= 1/6, no need to plot.")
             return
         
-        lambdas = np.linspace(self.lambda_star - 1, self.lambda_star + 1 , 5000)
+        if self.lambda_star is None or not np.isfinite(self.lambda_star):
+            print("Cannot plot: lambda_star is not computed or invalid.")
+            return
+            
+        lambdas = np.linspace(self.lambda_star - 1, self.lambda_star + 1, self.DEFAULT_N_POINTS)
         equations = [self._equation(lam) for lam in lambdas]
 
         plt.figure(figsize=(8, 5))
@@ -573,12 +577,12 @@ class SubGaussian3MassAsymmetricProxy:
             raise ValueError("p1 and p2 must be in (0,1).")
         if p2 < p1:
             raise ValueError("p2 must be >= p1.")
-        self.p1 = float(p1)
-        self.p2 = float(p2)
+        self.p1 = p1
+        self.p2 = p2
         self.p3 = 1.0 - self.p1 - self.p2
         if not (0.0 < self.p3 < 1.0):
             raise ValueError("p3 must be in (0,1), i.e., p1 + p2 < 1.")
-        self.a = float(a)
+        self.a = a
 
         self.variance = self.p1 + self.p2 - (self.p2 - self.p1) ** 2
         self.sigma_opt_squared = None
@@ -694,7 +698,7 @@ class SubGaussian3MassAsymmetricProxy:
         return None
 
 
-    def subgaussian_optimal_variance_proxy(self, tol: float = 1e-8) -> float:
+    def subgaussian_optimal_variance_proxy(self, tol: float = 1e-8) -> Tuple[float, float]:
         """
         Return a^2 * sigma_opt_squared :
         - Easy regime (p3 <= 4*sqrt(p1*p2)): exact closed-form (boundary at λ→0+).
@@ -730,12 +734,14 @@ class SubGaussian3MassAsymmetricProxy:
 
 
     def plot_objective_function(self, n_points: int = 50000):
-
-       
         if self.p3 <= 4.0 * np.sqrt(self.p1 * self.p2):
             print(f"There is a closed form for (p1, p2) = ({self.p1}, {self.p2}), no plot to display.")
             return  
         
+        if self.lambda_star is None or not np.isfinite(self.lambda_star):
+            print("Cannot plot: lambda_star is not computed or invalid.")
+            return
+            
         lambdas = np.linspace(self.lambda_star - 1, self.lambda_star + 1 , n_points)
         equations = [self._equation(lam) for lam in lambdas]
 
@@ -808,28 +814,32 @@ class SubGaussianBetaProxy:
 
 
     def plot_objective_function(self, n_points: int = 50000):
-            """
-            Plot h(λ) = 2/λ² * log E[exp(λ(X-μ))] and its maximum.
-            """
+        """
+        Plot h(λ) = 2/λ² * log E[exp(λ(X-μ))] and its maximum.
+        """
+        # Ensure we have computed the optimal values
+        opt_val, lam_star = self.subgaussian_optimal_variance_proxy()
+        
+        if not np.isfinite(lam_star):
+            print("Cannot plot: lambda_star is not finite.")
+            return
 
-            lam_vals = np.linspace(self.lambda_star - 1, self.lambda_star + 1, n_points)
-            h_vals = [self.h_beta(l) for l in lam_vals]
+        lam_vals = np.linspace(lam_star - 1, lam_star + 1, n_points)
+        h_vals = [self.h_beta(l) for l in lam_vals]
 
-            opt_val, lam_star = self.subgaussian_optimal_variance_proxy()
-
-            plt.figure(figsize=(8, 5))
-            plt.plot(lam_vals, h_vals, label="h(λ)")
-            plt.axvline(lam_star, color="gray", ls="--", label=f"λ*={lam_star:.2f}")
-            if np.isfinite(lam_star):
-                label_template = r"$\max_{{\lambda}} h={:.4f} \ at \ \lambda^*={:.2f}$"
-                plt.scatter([lam_star], [opt_val], color="red", zorder=5,
-                label=label_template.format(opt_val, lam_star))
-            plt.xlabel("λ")
-            plt.ylabel("h(λ)")
-            plt.title(f"h(λ) for Beta(α={self.alpha}, β={self.beta})")
-            plt.legend(loc="lower left")
-            plt.grid(True)
-            plt.show()    
+        plt.figure(figsize=(8, 5))
+        plt.plot(lam_vals, h_vals, label="h(λ)")
+        plt.axvline(lam_star, color="gray", ls="--", label=f"λ*={lam_star:.2f}")
+        if np.isfinite(lam_star):
+            label_template = r"$\max_{{\lambda}} h={:.4f} \ at \ \lambda^*={:.2f}$"
+            plt.scatter([lam_star], [opt_val], color="red", zorder=5,
+            label=label_template.format(opt_val, lam_star))
+        plt.xlabel("λ")
+        plt.ylabel("h(λ)")
+        plt.title(f"h(λ) for Beta(α={self.alpha}, β={self.beta})")
+        plt.legend(loc="lower left")
+        plt.grid(True)
+        plt.show()    
             
     def subgaussian_optimal_variance_proxy(self):
         """
